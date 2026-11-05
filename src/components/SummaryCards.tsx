@@ -19,8 +19,8 @@ interface Tile {
 const MASK = '$ ••••';
 
 /** Value with a crossfade / blur to a mask when pay figures are hidden. */
-function TileValue({ value, negative, hidden }: { value: number; negative?: boolean; hidden: boolean }) {
-  const v = useTween(value, 300);
+function TileValue({ value, negative, hidden, hero }: { value: number; negative?: boolean; hidden: boolean; hero?: boolean }) {
+  const v = useTween(value, hero ? 600 : 400);
   // After the fade-out, drop the real figure from the DOM so it can't be read or copied.
   const [gone, setGone] = useState(hidden);
   useEffect(() => {
@@ -30,7 +30,7 @@ function TileValue({ value, negative, hidden }: { value: number; negative?: bool
   }, [hidden]);
   return (
     <div
-      className="grid text-[17px] font-bold tabular-nums tracking-[-0.02em] text-slate-900 sm:text-2xl"
+      className={`grid tabular-nums tracking-[-0.02em] text-slate-900 ${hero ? 'text-[28px] font-extrabold' : 'text-[15px] font-bold sm:text-2xl'}`}
       aria-label={hidden ? 'hidden' : `${negative ? 'minus ' : ''}${money(value)}`}
     >
       <span aria-hidden className={`col-start-1 row-start-1 truncate transition-[opacity,filter] duration-200 ease-out ${hidden ? 'opacity-0 blur-sm' : 'opacity-100 blur-0'}`}>
@@ -60,7 +60,7 @@ export function SummaryCards({ result, hidden, onToggleHidden }: { result: PayRe
   ];
 
   return (
-    <div className="relative grid grid-cols-2 gap-1.5 sm:gap-3 lg:grid-cols-4">
+    <div className="relative grid grid-cols-3 gap-1.5 sm:gap-3 lg:grid-cols-4">
       <button
         type="button"
         onClick={onToggleHidden}
@@ -76,15 +76,15 @@ export function SummaryCards({ result, hidden, onToggleHidden }: { result: PayRe
         <div
           key={t.key}
           style={{ '--i': i } as CSSProperties}
-          className={`anim-fade-up group relative min-w-0 overflow-hidden rounded-xl px-3 py-2 transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] sm:p-4 ${t.fill} ${t.hero ? 'ring-1 ring-good/25' : ''}`}
+          className={`anim-fade-up group relative min-w-0 overflow-hidden rounded-xl px-3 py-2 transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] sm:p-4 ${t.fill} ${t.hero ? 'col-span-3 lg:col-span-1 ring-1 ring-good/25' : ''}`}
         >
           {t.hero && (
             <div aria-hidden className="halftone pointer-events-none absolute right-0 bottom-0 hidden h-full w-28 text-good/20 [mask-image:linear-gradient(to_left,black,transparent)] sm:block lg:w-32" />
           )}
           <div className="relative">
             {/* Leave room for the eye button: top-right tile is CPF on phones (2×2), Net on desktop (4 across). */}
-            <div className={`truncate text-[11px] font-medium text-slate-500 sm:text-[13px] ${i === 1 ? 'max-lg:pr-8' : ''} ${i === 3 ? 'lg:pr-9' : ''}`}>{t.label}</div>
-            <TileValue value={t.value} negative={t.negative} hidden={hidden} />
+            <div className={`truncate text-[11px] font-medium text-slate-500 sm:text-[13px] ${i === 2 ? 'max-lg:pr-8' : ''} ${i === 3 ? 'lg:pr-9' : ''}`}>{t.label}</div>
+            <TileValue value={t.value} negative={t.negative} hidden={hidden} hero={t.hero} />
             <div className="mt-1.5 hidden sm:block">
               <span className="inline-flex items-center rounded-full bg-white/70 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">{hidden && t.subMoney ? 'OT ••••' : t.sub}</span>
             </div>
