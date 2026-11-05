@@ -1,5 +1,5 @@
 import { Calculator, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Breakdown } from './components/Breakdown';
 import { CycleInfo } from './components/CycleInfo';
 import { InputPanel } from './components/InputPanel';
@@ -67,6 +67,9 @@ export default function App() {
 
   const tabIdx = TAB_ITEMS.findIndex((t) => t.id === tab);
   const current = TAB_ITEMS[tabIdx];
+  const prevTabIdx = useRef(tabIdx);
+  const tabDir = tabIdx > prevTabIdx.current ? 1 : tabIdx < prevTabIdx.current ? -1 : 0;
+  useEffect(() => { prevTabIdx.current = tabIdx; }, [tabIdx]);
 
   const goTo = (t: Tab) => {
     setTab(t);
@@ -162,7 +165,7 @@ export default function App() {
         </div>
 
         <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="mx-auto max-w-6xl px-3 pt-4 pb-28 sm:px-6 sm:pt-6 lg:pb-10">
-          <div key={tab} className="anim-tab space-y-4">
+          <div key={tab} className="anim-tab space-y-4" style={{ '--dir': tabDir } as CSSProperties}>
             {tab === 'calculator' && (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)]">
                 <InputPanel
@@ -225,8 +228,8 @@ export default function App() {
         className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_8px_rgba(0,0,0,0.03)] lg:hidden"
       >
         <div role="tablist" className="relative mx-auto grid max-w-xl grid-cols-4">
-          <span aria-hidden className="absolute top-0 left-0 h-[2px] w-1/4 transition-transform duration-250 ease-out" style={{ transform: `translateX(${tabIdx * 100}%)` }}>
-            <span className="mx-auto block h-full w-10 rounded-full bg-ink" />
+          <span aria-hidden className="absolute top-0 left-0 h-[3px] w-1/4 transition-transform duration-300 ease-[cubic-bezier(.3,1.35,.5,1)]" style={{ transform: `translateX(${tabIdx * 100}%)` }}>
+            <span className="mx-auto block h-full w-10 rounded-full bg-accent" />
           </span>
           {TAB_ITEMS.map((t) => {
             const active = tab === t.id;
