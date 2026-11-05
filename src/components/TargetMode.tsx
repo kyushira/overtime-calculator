@@ -38,10 +38,10 @@ function TargetProgress({ target, outcome }: { target: number; outcome: TargetRe
       </div>
       <div className="relative py-1" role="img" aria-label={`Base net (no OT) ${money(outcome.baseNet)}, with OT ${money(reached)}, target ${money(target)}`}>
         <div className="relative h-3 overflow-hidden rounded-full bg-white ring-1 ring-slate-200">
-          <span className="anim-grow-x absolute inset-y-0 left-0 rounded-full bg-slate-800" style={{ width: pct(base), '--i': 0 } as CSSProperties} />
-          <span className="anim-grow-x absolute inset-y-0 rounded-r-full bg-accent" style={{ left: pct(base), width: pct(reached - base), '--i': 3 } as CSSProperties} />
+          <span className="anim-grow-x absolute inset-y-0 left-0 rounded-full bg-slate-800 transition-[width,left] duration-500 ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none" style={{ width: pct(base), '--i': 0 } as CSSProperties} />
+          <span className="anim-grow-x absolute inset-y-0 rounded-r-full bg-accent transition-[width,left] duration-500 ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:transition-none" style={{ left: pct(base), width: pct(reached - base), '--i': 3 } as CSSProperties} />
         </div>
-        <span aria-hidden className="absolute inset-y-0 w-[3px] -translate-x-1/2 rounded-full bg-good ring-2 ring-white" style={{ left: pct(target) }} />
+        <span aria-hidden className="absolute inset-y-0 w-[3px] -translate-x-1/2 rounded-full bg-good ring-2 ring-white transition-[left] duration-500 ease-out motion-reduce:transition-none" style={{ left: pct(target) }} />
       </div>
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
         <li className="flex items-center gap-1.5"><span aria-hidden className="size-2 rounded-full bg-slate-800" /> Base net (no OT) {money(outcome.baseNet)}</li>
