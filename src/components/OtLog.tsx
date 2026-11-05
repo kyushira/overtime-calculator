@@ -218,6 +218,7 @@ export function OtLog({ cycle, entries, onChange, otHours, totals, shiftAllowanc
                 key={iso}
                 type="button"
                 data-date={iso}
+                data-state={status ?? 'off'}
                 aria-label={label}
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
@@ -238,7 +239,7 @@ export function OtLog({ cycle, entries, onChange, otHours, totals, shiftAllowanc
                   onChange(tapDay(entries, iso));
                 }}
                 style={{ WebkitTouchCallout: 'none', touchAction: 'manipulation' }}
-                className={`relative min-h-11 min-w-0 select-none rounded-lg py-1 text-sm font-semibold leading-tight transition-[background-color,color,box-shadow] duration-200 ease-out [-webkit-user-select:none] ${dayStyle(kind, status)} ${isOpen ? 'z-10 ring-2 ring-ink' : ''}`}
+                className={`day-cell relative min-h-11 min-w-0 select-none rounded-lg py-1 text-sm font-semibold leading-tight transition-[background-color,color,box-shadow] duration-200 ease-out [-webkit-user-select:none] ${dayStyle(kind, status)} ${isOpen ? 'z-10 ring-2 ring-ink' : ''}`}
               >
                 {d.getDate()}
                 <span className={`block text-[9px] leading-none ${status === 'ph' ? 'font-bold tracking-wide' : 'font-medium opacity-80'}`}>{sub}</span>

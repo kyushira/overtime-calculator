@@ -166,3 +166,9 @@ input[type='number'] {
   outline-offset: 2px;
   border-radius: 8px;
 }
+
+@keyframes day-set { 0% { transform: scale(.9) } 60% { transform: scale(1.05) } 100% { transform: scale(1) } }
+.day-cell { transition: transform 120ms ease-out, background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.day-cell:active { transform: scale(.92); }
+.day-cell[data-state]:not([data-state='off']) { animation: day-set 220ms cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion: reduce) { .day-cell, .day-cell:active { transition: none; transform: none; animation: none !important; } }
