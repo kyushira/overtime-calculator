@@ -67,7 +67,7 @@ export function SummaryCards({ result, hidden, onToggleHidden }: { result: PayRe
         aria-label={hidden ? 'Show pay figures' : 'Hide pay figures'}
         aria-pressed={hidden}
         title={hidden ? 'Show pay figures' : 'Hide pay figures'}
-        className="absolute top-1 right-1 z-10 grid size-8 place-items-center rounded-full bg-white/80 text-slate-500 ring-1 ring-slate-200 backdrop-blur transition duration-150 ease-out hover:text-slate-900 active:scale-90 sm:top-2 sm:right-2"
+        className="absolute top-1 right-1 z-10 grid size-11 place-items-center rounded-full bg-white/80 text-slate-500 ring-1 ring-slate-200 backdrop-blur transition duration-150 ease-out hover:text-slate-900 active:scale-90 sm:top-2 sm:right-2"
       >
         <Eye size={16} strokeWidth={1.5} aria-hidden className={`col-start-1 row-start-1 transition-[opacity,transform] duration-200 ${hidden ? 'scale-75 opacity-0' : 'opacity-100'}`} />
         <EyeOff size={16} strokeWidth={1.5} aria-hidden className={`col-start-1 row-start-1 transition-[opacity,transform] duration-200 ${hidden ? 'opacity-100' : 'scale-75 opacity-0'}`} />
@@ -83,7 +83,7 @@ export function SummaryCards({ result, hidden, onToggleHidden }: { result: PayRe
           )}
           <div className="relative">
             {/* Leave room for the eye button: top-right tile is CPF on phones (2×2), Net on desktop (4 across). */}
-            <div className={`truncate text-[11px] font-medium text-slate-500 sm:text-[13px] ${i === 2 ? 'max-lg:pr-8' : ''} ${i === 3 ? 'lg:pr-9' : ''}`}>{t.label}</div>
+            <div className={`truncate text-[11px] font-medium text-slate-500 sm:text-[13px] ${i === 2 ? 'max-lg:pr-11' : ''} ${i === 3 ? 'lg:pr-12' : ''}`}>{t.label}</div>
             <TileValue value={t.value} negative={t.negative} hidden={hidden} hero={t.hero} />
             <div className="mt-1.5 hidden sm:block">
               <span className="inline-flex items-center rounded-full bg-white/70 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">{hidden && t.subMoney ? 'OT ••••' : t.sub}</span>

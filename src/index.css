@@ -160,3 +160,9 @@ input[type='number'] {
     scroll-behavior: auto !important;
   }
 }
+
+:focus-visible {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
