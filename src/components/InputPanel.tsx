@@ -139,7 +139,7 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
         <div>
           <div className="mb-1 flex items-center justify-between">
             <SectionLabel>Deductions</SectionLabel>
-            <button type="button" onClick={addDeduction} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[13px] font-medium text-slate-900 transition hover:bg-slate-100 active:scale-[0.97]">
+            <button type="button" onClick={addDeduction} className="inline-flex items-center gap-1 min-h-11 min-w-11 rounded-lg px-2 py-1 text-[13px] font-medium text-slate-900 transition hover:bg-slate-100 active:scale-[0.97]">
               <Plus size={14} strokeWidth={1.75} aria-hidden /> Add custom
             </button>
           </div>
@@ -173,7 +173,7 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
                       type="button"
                       aria-label="Remove deduction"
                       onClick={() => update({ customDeductions: form.customDeductions.filter((x) => x.id !== d.id) })}
-                      className="rounded-lg px-2 text-slate-400 transition hover:bg-bad-bg hover:text-bad active:scale-95"
+                      className="min-h-11 min-w-11 rounded-lg px-2 text-slate-400 transition hover:bg-bad-bg hover:text-bad active:scale-95"
                     >
                       <X size={16} strokeWidth={1.5} aria-hidden />
                     </button>

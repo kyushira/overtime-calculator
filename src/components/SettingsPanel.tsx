@@ -114,7 +114,7 @@ export function SettingsPanel({ config, onChange, onReset }: Props) {
                   type="button"
                   aria-label="Remove"
                   onClick={() => onChange({ ...config, defaultDeductions: config.defaultDeductions.filter((x) => x.id !== d.id) })}
-                  className="self-start rounded-lg px-2 py-2 text-slate-400 transition hover:bg-bad-bg hover:text-bad active:scale-95"
+                  className="min-h-11 min-w-11 self-start rounded-lg px-2 py-2 text-slate-400 transition hover:bg-bad-bg hover:text-bad active:scale-95"
                 >
                   <X size={16} strokeWidth={1.5} aria-hidden />
                 </button>
@@ -123,7 +123,7 @@ export function SettingsPanel({ config, onChange, onReset }: Props) {
             <button
               type="button"
               onClick={() => onChange({ ...config, defaultDeductions: [...config.defaultDeductions, { id: crypto.randomUUID(), label: 'New deduction', amount: 0 }] })}
-              className="rounded-lg px-2 py-1 text-[13px] font-medium text-slate-900 transition hover:bg-slate-100 active:scale-[0.97]"
+              className="min-h-11 min-w-11 rounded-lg px-2 py-1 text-[13px] font-medium text-slate-900 transition hover:bg-slate-100 active:scale-[0.97]"
             >
               + Add fixed deduction
             </button>

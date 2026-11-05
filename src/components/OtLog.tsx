@@ -366,7 +366,7 @@ function HoldMenu({ menu, status, otHours, onChoose, onClose }: {
     >
       <div className="flex items-center justify-between px-2.5 pt-1 pb-1.5">
         <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-400">{shortDate(d)}</span>
-        <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+        <button type="button" onClick={onClose} aria-label="Close" className="grid size-11 place-items-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700">
           <X size={14} strokeWidth={1.75} aria-hidden />
         </button>
       </div>
@@ -376,7 +376,7 @@ function HoldMenu({ menu, status, otHours, onChoose, onClose }: {
         aria-checked={status === 'otLong'}
         disabled={!longOk}
         onClick={() => onChoose('otLong')}
-        className={`${opt} ${status === 'otLong' ? 'bg-accent-dark text-white' : 'text-slate-900 hover:bg-accent-bg'}`}
+        className={`${opt} min-h-11 ${status === 'otLong' ? 'bg-accent-dark text-white' : 'text-slate-900 hover:bg-accent-bg'}`}
       >
         <span className={`flex size-7 items-center justify-center rounded-md ${status === 'otLong' ? 'bg-white/15' : 'bg-accent-bg text-accent'}`}><Clock size={16} strokeWidth={1.75} aria-hidden /></span>
         <span className="flex-1">
@@ -392,7 +392,7 @@ function HoldMenu({ menu, status, otHours, onChoose, onClose }: {
         role="menuitemradio"
         aria-checked={status === 'ph'}
         onClick={() => onChoose('ph')}
-        className={`${opt} mt-1 ${status === 'ph' ? 'bg-ph text-white' : 'text-slate-900 hover:bg-ph-bg'}`}
+        className={`${opt} min-h-11 mt-1 ${status === 'ph' ? 'bg-ph text-white' : 'text-slate-900 hover:bg-ph-bg'}`}
       >
         <span className={`flex size-7 items-center justify-center rounded-md ${status === 'ph' ? 'bg-white/15' : 'bg-ph-bg text-ph'}`}><Landmark size={16} strokeWidth={1.75} aria-hidden /></span>
         <span className="flex-1">
@@ -408,7 +408,7 @@ function HoldMenu({ menu, status, otHours, onChoose, onClose }: {
           type="button"
           role="menuitem"
           onClick={() => onChoose('clear')}
-          className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+          className="mt-1 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
           <Eraser size={13} strokeWidth={1.75} aria-hidden /> Clear day
         </button>
