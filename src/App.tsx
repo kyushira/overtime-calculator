@@ -1,6 +1,7 @@
-import { Calculator, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
+import { Calculator, Car, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Breakdown } from './components/Breakdown';
+import { CarCalculator } from './components/CarCalculator';
 import { CycleInfo } from './components/CycleInfo';
 import { InputPanel } from './components/InputPanel';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -40,6 +41,7 @@ const TAB_ITEMS: { id: Tab; label: string; icon: LucideIcon; blurb: string }[] =
   { id: 'breakdown', label: 'Breakdown', icon: ReceiptText, blurb: 'Where your gross comes from, line by line' },
   { id: 'target', label: 'Target', icon: Target, blurb: 'Minimum OT to reach a net pay goal' },
   { id: 'settings', label: 'Settings', icon: Settings, blurb: 'Pay rules, CPF and deductions' },
+  { id: 'car', label: 'Car', icon: Car, blurb: 'Car loan, running costs and affordability' },
 ];
 
 const ICON = { size: 18, strokeWidth: 1.5 } as const;
@@ -158,11 +160,14 @@ export default function App() {
         </header>
 
         {/* Pinned KPI tiles */}
-        <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur-md">
-          <div className="mx-auto max-w-6xl px-3 py-2 sm:px-6 sm:py-4">
-            <SummaryCards result={result} hidden={hidePay} onToggleHidden={() => setHidePay((h) => !h)} />
+        {/* The car tab has its own figures, so the OT pay tiles are not shown there. */}
+        {tab !== 'car' && (
+          <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+            <div className="mx-auto max-w-6xl px-3 py-2 sm:px-6 sm:py-4">
+              <SummaryCards result={result} hidden={hidePay} onToggleHidden={() => setHidePay((h) => !h)} />
+            </div>
           </div>
-        </div>
+        )}
 
         <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="mx-auto max-w-6xl px-3 pt-4 pb-28 sm:px-6 sm:pt-6 lg:pb-10">
           <div key={tab} className="anim-tab space-y-4" style={{ '--dir': tabDir } as CSSProperties}>
@@ -215,9 +220,13 @@ export default function App() {
               </div>
             )}
 
-            <p className="pt-2 text-center text-xs text-slate-400">
-              Estimates only. Unpaid leave and age-based CPF rate changes are not modelled automatically.
-            </p>
+            {tab === 'car' && <CarCalculator otNet={result.net} />}
+
+            {tab !== 'car' && (
+              <p className="pt-2 text-center text-xs text-slate-400">
+                Estimates only. Unpaid leave and age-based CPF rate changes are not modelled automatically.
+              </p>
+            )}
           </div>
         </main>
       </div>
@@ -227,8 +236,8 @@ export default function App() {
         aria-label="Sections"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_8px_rgba(0,0,0,0.03)] lg:hidden"
       >
-        <div role="tablist" className="relative mx-auto grid max-w-xl grid-cols-4">
-          <span aria-hidden className="absolute top-0 left-0 h-[3px] w-1/4 transition-transform duration-300 ease-[cubic-bezier(.3,1.35,.5,1)]" style={{ transform: `translateX(${tabIdx * 100}%)` }}>
+        <div role="tablist" className="relative mx-auto grid max-w-xl grid-cols-5">
+          <span aria-hidden className="absolute top-0 left-0 h-[3px] w-1/5 transition-transform duration-300 ease-[cubic-bezier(.3,1.35,.5,1)]" style={{ transform: `translateX(${tabIdx * 100}%)` }}>
             <span className="mx-auto block h-full w-10 rounded-full bg-accent" />
           </span>
           {TAB_ITEMS.map((t) => {
