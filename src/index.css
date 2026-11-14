@@ -52,7 +52,8 @@
   --color-chart-deduction: #e5484d;
   --color-chart-instalment: #5b4bd6;
   --color-chart-track: #e2e2e6;
-  --color-chart-label: #9ca3af;
+  /* Light: the donut/dot labels are SVG text on white; #9ca3af was 2.5:1, this is 4.8:1. */
+  --color-chart-label: #6b7280;
 
   /* KPI tile tints */
   --color-tile-blue: #eef4fd;
@@ -105,9 +106,10 @@
   --color-slate-200: #272c3d;
   --color-slate-300: #353b4f;
   --color-slate-400: #8f97ab;
-  --color-slate-500: #adb4c6;
+  --color-slate-500: #b0b7c8;
   --color-slate-600: #c3c9d7;
-  /* (slate-500 #adb4c6 is the tile-label colour too: >=6.5:1 on every tile tint.) */
+  /* (slate-500 #b0b7c8 is the tile-label colour too: >=6.5:1 on every tile tint, and >=4.5:1 even
+     where the page glow sits behind bare text.) */
   --color-slate-700: #d6dae5;
   --color-slate-800: #e6e9f1;
   --color-slate-900: #f3f5f9;
