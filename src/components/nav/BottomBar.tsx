@@ -18,21 +18,18 @@ export function BottomBar({ items, active, onSelect }: {
 }) {
   return (
     <nav
-      aria-label="Sections"
+      aria-label="Pay quick nav"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-surface pb-[max(6px,env(safe-area-inset-bottom))] shadow-[0_-1px_8px_rgba(0,0,0,0.03)] lg:hidden"
     >
-      <div role="tablist" className="mx-auto grid max-w-xl grid-cols-4">
+      <div className="mx-auto grid max-w-xl grid-cols-4">
         {items.map((t) => {
           const on = active === t.id;
           const Icon = t.icon;
           return (
             <button
               key={t.id}
-              id={`tab-${t.id}`}
               type="button"
-              role="tab"
-              aria-selected={on}
-              aria-controls="panel"
+              aria-current={on ? 'page' : undefined}
               onClick={() => onSelect(t.id)}
               className={`flex min-h-14 flex-col items-center justify-center gap-1 text-[12px] font-medium transition-colors duration-200 active:scale-95 ${
                 on ? 'text-accent' : 'text-slate-400'

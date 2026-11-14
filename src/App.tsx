@@ -61,7 +61,7 @@ const PAY_ITEMS = TAB_ITEMS.filter((t) => isBarTab(t.id));
 
 const ICON = { size: 18, strokeWidth: 1.5 } as const;
 const NAV_ROW = 48; // px: 44px item + 4px gap, used by the sliding indicator
-const HEADER_BTN = 'grid min-h-11 min-w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition duration-150 ease-out hover:bg-slate-100 hover:text-slate-900 active:scale-95';
+const HEADER_BTN = 'grid min-h-11 min-w-11 shrink-0 place-items-center rounded-lg transition duration-150 ease-out hover:bg-slate-100 hover:text-slate-900 active:scale-95';
 
 function Logo() {
   return (
@@ -137,7 +137,7 @@ export default function App() {
         </div>
 
         <SectionLabel className="mt-6 mb-2 px-2.5">Pay</SectionLabel>
-        <nav aria-label="Sections" className="relative">
+        <nav aria-label="Pay sections" className="relative">
           {/* Sliding active indicator: outlined box with a thin left accent bar. Hidden off the pay tabs. */}
           <span
             aria-hidden
@@ -146,7 +146,7 @@ export default function App() {
           >
             <span className="absolute inset-y-0 left-0 w-[3px] bg-ink" />
           </span>
-          <ul role="tablist" aria-orientation="vertical" className="relative flex flex-col gap-1">
+          <ul className="relative flex flex-col gap-1">
             {PAY_ITEMS.map((t) => {
               const active = tab === t.id;
               const Icon = t.icon;
@@ -154,10 +154,7 @@ export default function App() {
                 <li key={t.id}>
                   <button
                     type="button"
-                    role="tab"
-                    id={`tab-${t.id}`}
-                    aria-selected={active}
-                    aria-controls="panel"
+                    aria-current={active ? 'page' : undefined}
                     onClick={() => goTo(t.id)}
                     className={`flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
                       active ? 'text-slate-900' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
@@ -207,9 +204,9 @@ export default function App() {
                 type="button"
                 onClick={() => goTo('settings')}
                 aria-label="Settings"
-                aria-pressed={tab === 'settings'}
+                aria-current={tab === 'settings' ? 'page' : undefined}
                 title="Settings"
-                className={`${HEADER_BTN} ${tab === 'settings' ? 'bg-accent-bg text-accent' : ''}`}
+                className={`${HEADER_BTN} ${tab === 'settings' ? 'bg-accent-bg text-accent' : 'text-slate-500'}`}
               >
                 <Settings size={18} strokeWidth={1.5} aria-hidden />
               </button>
