@@ -12,6 +12,10 @@ import { btnOutline, SectionLabel } from './components/ui';
 import { AppearanceCard } from './components/AppearanceCard';
 import { PrivacyToggle } from './components/PrivacyToggle';
 import { ThemeToggle } from './components/ThemeToggle';
+import { BottomBar } from './components/nav/BottomBar';
+import { PayCarSwitch } from './components/nav/PayCarSwitch';
+import { SummaryStrip } from './components/nav/SummaryStrip';
+import { isBarTab, modeOf, nextLastPayTab, parseBarTab, summaryVariant, type BarTab, type Mode } from './components/nav/navModel';
 import { useCompactOnScroll } from './hooks/useCompactOnScroll';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { usePayrollForm } from './hooks/usePayrollForm';
@@ -52,8 +56,12 @@ const TAB_ITEMS: { id: Tab; label: string; icon: LucideIcon; blurb: string }[] =
   { id: 'car', label: 'Car', icon: Car, blurb: 'Car loan, running costs and affordability' },
 ];
 
+/** Pay-mode tabs shown in the bottom bar and the sidebar list (Settings is the header gear). */
+const PAY_ITEMS = TAB_ITEMS.filter((t) => isBarTab(t.id));
+
 const ICON = { size: 18, strokeWidth: 1.5 } as const;
 const NAV_ROW = 48; // px: 44px item + 4px gap, used by the sliding indicator
+const HEADER_BTN = 'grid min-h-11 min-w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition duration-150 ease-out hover:bg-slate-100 hover:text-slate-900 active:scale-95';
 
 function Logo() {
   return (
@@ -67,8 +75,12 @@ export default function App() {
   const [config, setConfig] = useLocalStorage<PayrollConfig>('otcalc.config.v1', DEFAULT_CONFIG, migrateConfig);
   const [form, setForm] = useLocalStorage<FormState>('otcalc.form.v1', initialForm(), (raw) => migrateForm(raw, initialForm()));
   const [tab, setTab] = useTab();
-  // Privacy: mask the 4 summary tiles (remembered across reloads).
+  // Last pay tab, so Pay | Car returns to it (remembered across reloads).
+  const [lastPay, setLastPay] = useLocalStorage<BarTab>('otcalc.payTab.v1', 'calculator', parseBarTab);
+  // Privacy: mask the summary figures (remembered across reloads).
   const [hidePay, setHidePay] = useLocalStorage<boolean>('otcalc.hidePay.v1', false, (raw) => raw === true);
+  // Collapsed summary strip (Breakdown, Target, Months): tapped open to the full grid.
+  const [summaryOpen, setSummaryOpen] = useState(false);
   // Bumped on reset so settings inputs remount with fresh values.
   const [settingsKey, setSettingsKey] = useState(0);
   // One theme state for the whole app: header toggle and Settings share it.
@@ -83,14 +95,21 @@ export default function App() {
 
   const tabIdx = TAB_ITEMS.findIndex((t) => t.id === tab);
   const current = TAB_ITEMS[tabIdx];
+  const mode: Mode = modeOf(tab);
+  const payIdx = PAY_ITEMS.findIndex((t) => t.id === tab);
   const prevTabIdx = useRef(tabIdx);
   const tabDir = tabIdx > prevTabIdx.current ? 1 : tabIdx < prevTabIdx.current ? -1 : 0;
   useEffect(() => { prevTabIdx.current = tabIdx; }, [tabIdx]);
+  useEffect(() => { setLastPay((l) => nextLastPayTab(tab, l)); }, [tab, setLastPay]);
+
+  const summary = summaryVariant(tab);
 
   const goTo = (t: Tab) => {
     setTab(t);
     window.scrollTo({ top: 0 });
   };
+
+  const switchMode = (m: Mode) => goTo(m === 'car' ? 'car' : lastPay);
 
   const applyCombo = (q: OtQuantities) => {
     update({
@@ -117,18 +136,18 @@ export default function App() {
           </div>
         </div>
 
-        <SectionLabel className="mt-6 mb-2 px-2.5">Main</SectionLabel>
+        <SectionLabel className="mt-6 mb-2 px-2.5">Pay</SectionLabel>
         <nav aria-label="Sections" className="relative">
-          {/* Sliding active indicator: outlined box with a thin left accent bar. */}
+          {/* Sliding active indicator: outlined box with a thin left accent bar. Hidden off the pay tabs. */}
           <span
             aria-hidden
-            className="absolute inset-x-0 top-0 h-10 overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-[var(--shadow-card)] transition-transform duration-250 ease-out"
-            style={{ transform: `translateY(${tabIdx * NAV_ROW}px)` }}
+            className={`absolute inset-x-0 top-0 h-10 overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-[var(--shadow-card)] transition-[transform,opacity] duration-250 ease-out ${payIdx >= 0 ? 'opacity-100' : 'opacity-0'}`}
+            style={{ transform: `translateY(${Math.max(payIdx, 0) * NAV_ROW}px)` }}
           >
             <span className="absolute inset-y-0 left-0 w-[3px] bg-ink" />
           </span>
           <ul role="tablist" aria-orientation="vertical" className="relative flex flex-col gap-1">
-            {TAB_ITEMS.map((t) => {
+            {PAY_ITEMS.map((t) => {
               const active = tab === t.id;
               const Icon = t.icon;
               return (
@@ -151,6 +170,17 @@ export default function App() {
               );
             })}
           </ul>
+          <button
+            type="button"
+            onClick={() => goTo('car')}
+            aria-current={mode === 'car' ? 'page' : undefined}
+            className={`mt-2 flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
+              mode === 'car' ? 'text-accent' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Car {...ICON} aria-hidden />
+            Car
+          </button>
         </nav>
 
         <p className="mt-auto rounded-lg border border-slate-200 p-3 text-[11px] leading-snug text-slate-400">
@@ -159,36 +189,67 @@ export default function App() {
       </aside>
 
       <div className="lg:pl-60">
-        {/* Top bar */}
+        {/* Top bar: short title on phones, view title on desktop. Pay | Car switch, eye, theme, settings gear. */}
         <header className="border-b border-slate-200 bg-surface">
-          <div className="mx-auto flex max-w-6xl items-center gap-2.5 px-3 py-2.5 sm:px-6 lg:h-16 lg:py-0">
-            <span className="lg:hidden"><Logo /></span>
-            <div className="min-w-0">
-              <h1 className="truncate text-[15px] font-semibold text-slate-900 lg:text-lg">
-                <span className="lg:hidden">Salary & OT Calculator</span>
+          <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-2.5 sm:px-6 lg:h-16 lg:gap-3 lg:py-0">
+            <div className="min-w-0 flex-1">
+              <h1 id="view-title" className="truncate text-[15px] font-semibold text-slate-900 lg:text-lg">
+                <span className="lg:hidden">OT Calc</span>
                 <span className="hidden lg:inline">{current.label}</span>
               </h1>
               <p className="hidden truncate text-[13px] text-slate-500 sm:block">{current.blurb}</p>
             </div>
-            <div className="ml-auto flex shrink-0 items-center">
+            <PayCarSwitch mode={mode} onChange={switchMode} />
+            <div className="flex shrink-0 items-center">
               <PrivacyToggle hidden={hidePay} onToggle={() => setHidePay((h) => !h)} />
               <ThemeToggle pref={theme.pref} onCycle={theme.cyclePref} />
+              <button
+                type="button"
+                onClick={() => goTo('settings')}
+                aria-label="Settings"
+                aria-pressed={tab === 'settings'}
+                title="Settings"
+                className={`${HEADER_BTN} ${tab === 'settings' ? 'bg-accent-bg text-accent' : ''}`}
+              >
+                <Settings size={18} strokeWidth={1.5} aria-hidden />
+              </button>
             </div>
           </div>
         </header>
 
-        {/* Pinned KPI tiles */}
-        {/* The car tab has its own figures, so the OT pay tiles are not shown there. */}
-        {tab !== 'car' && (
+        {/* Pinned summary. Calculator: full grid that collapses on scroll. Breakdown/Target/Months: one-line strip. Settings/Car: none. */}
+        {summary === 'full' && (
           <div className="sticky top-0 z-20 border-b border-slate-200 bg-surface/90 backdrop-blur-md">
             <div className={`mx-auto max-w-6xl px-3 transition-[padding] duration-200 sm:px-6 ${compact ? 'py-1.5' : 'py-2 sm:py-4'}`}>
               <SummaryCards result={result} hidden={hidePay} compact={compact} periodLabel={periodLabel} />
             </div>
           </div>
         )}
+        {summary === 'strip' && (
+          <div className="sticky top-0 z-20 border-b border-slate-200 bg-surface/90 backdrop-blur-md">
+            <div className="mx-auto max-w-6xl px-3 sm:px-6">
+              <SummaryStrip
+                result={result}
+                hidden={hidePay}
+                periodLabel={periodLabel}
+                expanded={summaryOpen}
+                onToggle={() => setSummaryOpen((o) => !o)}
+              />
+            </div>
+          </div>
+        )}
 
-        <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="mx-auto max-w-6xl px-3 pt-4 pb-28 sm:px-6 sm:pt-6 lg:pb-10">
+        <main
+          id="panel"
+          role="tabpanel"
+          aria-labelledby="view-title"
+          className={`mx-auto max-w-6xl px-3 pt-4 sm:px-6 sm:pt-6 ${mode === 'pay' ? 'pb-28 lg:pb-10' : 'pb-10'}`}
+        >
           <div key={tab} className="anim-tab space-y-4" style={{ '--dir': tabDir } as CSSProperties}>
+            {summary === 'strip' && summaryOpen && (
+              <SummaryCards result={result} hidden={hidePay} compact={false} periodLabel={periodLabel} />
+            )}
+
             {tab === 'calculator' && (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)]">
                 <InputPanel
@@ -202,6 +263,8 @@ export default function App() {
                   publicHolidayShifts={publicHolidayShifts}
                   fromCalendar={fromCalendar}
                   config={config}
+                  result={result}
+                  hidden={hidePay}
                 />
                 <div className="min-w-0 space-y-4">
                   {cycle && <CycleInfo cycle={cycle} />}
@@ -271,39 +334,10 @@ export default function App() {
         </main>
       </div>
 
-      {/* Mobile / tablet bottom tab bar (thumb reach) */}
-      <nav
-        aria-label="Sections"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_8px_rgba(0,0,0,0.03)] lg:hidden"
-      >
-        <div role="tablist" className="relative mx-auto grid max-w-xl grid-cols-6">
-          <span aria-hidden className="absolute top-0 left-0 h-[3px] w-1/6 transition-transform duration-300 ease-[cubic-bezier(.3,1.35,.5,1)]" style={{ transform: `translateX(${tabIdx * 100}%)` }}>
-            <span className="mx-auto block h-full w-10 rounded-full bg-accent" />
-          </span>
-          {TAB_ITEMS.map((t) => {
-            const active = tab === t.id;
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-controls="panel"
-                onClick={() => goTo(t.id)}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors duration-200 active:scale-95 ${
-                  active ? 'text-slate-900' : 'text-slate-400'
-                }`}
-              >
-                <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200 ${active ? 'bg-slate-200/70' : ''}`}>
-                  <Icon size={20} strokeWidth={1.5} aria-hidden />
-                </span>
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      {/* Pay mode only: four tabs. Settings (header gear) and Car (own mode) have no bar tab. */}
+      {mode === 'pay' && (
+        <BottomBar items={PAY_ITEMS} active={isBarTab(tab) ? tab : null} onSelect={goTo} />
+      )}
     </div>
   );
 }
