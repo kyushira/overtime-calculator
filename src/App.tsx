@@ -218,12 +218,13 @@ export default function App() {
         </header>
 
         {/* Pinned summary. Calculator: full grid that collapses on scroll. Breakdown/Target/Months: one-line strip. Settings/Car: none. */}
+        {/* A labelled region, so the pinned figures sit inside a landmark (axe: region). */}
         {summary === 'full' && (
-          <div className="sticky top-0 z-20 border-b border-slate-200 bg-surface/90 backdrop-blur-md">
+          <section aria-label="Pay summary" className="sticky top-0 z-20 border-b border-slate-200 bg-surface/90 backdrop-blur-md">
             <div className={`mx-auto max-w-6xl px-3 transition-[padding] duration-200 sm:px-6 ${compact ? 'py-1.5' : 'py-2 sm:py-4'}`}>
               <SummaryCards result={result} hidden={hidePay} compact={compact} periodLabel={periodLabel} />
             </div>
-          </div>
+          </section>
         )}
         {summary === 'strip' && (
           <div className="sticky top-0 z-20 border-b border-slate-200 bg-surface/90 backdrop-blur-md">
@@ -239,11 +240,11 @@ export default function App() {
           </div>
         )}
 
+        {/* overflow-x-clip: the tab-in animation slides up to 18px sideways, past the 12px gutter. */}
         <main
           id="panel"
-          role="tabpanel"
           aria-labelledby="view-title"
-          className={`mx-auto max-w-6xl px-3 pt-4 sm:px-6 sm:pt-6 ${mode === 'pay' ? 'pb-28 lg:pb-10' : 'pb-10'}`}
+          className={`mx-auto max-w-6xl overflow-x-clip px-3 pt-4 sm:px-6 sm:pt-6 ${mode === 'pay' ? 'pb-28 lg:pb-10' : 'pb-10'}`}
         >
           <div key={tab} className="anim-tab space-y-4" style={{ '--dir': tabDir } as CSSProperties}>
             {summary === 'strip' && summaryOpen && (
