@@ -1,9 +1,10 @@
-import { Calculator, Car, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
+import { Calculator, Car, CalendarRange, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Breakdown } from './components/Breakdown';
 import { CarCalculator } from './components/CarCalculator';
 import { CycleInfo } from './components/CycleInfo';
 import { InputPanel } from './components/InputPanel';
+import { MonthsTab } from './components/MonthsTab';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SummaryCards } from './components/SummaryCards';
 import { TargetMode } from './components/TargetMode';
@@ -40,6 +41,7 @@ const TAB_ITEMS: { id: Tab; label: string; icon: LucideIcon; blurb: string }[] =
   { id: 'calculator', label: 'Calculator', icon: Calculator, blurb: 'Shifts, overtime and deductions for the month' },
   { id: 'breakdown', label: 'Breakdown', icon: ReceiptText, blurb: 'Where your gross comes from, line by line' },
   { id: 'target', label: 'Target', icon: Target, blurb: 'Minimum OT to reach a net pay goal' },
+  { id: 'months', label: 'Months', icon: CalendarRange, blurb: 'Save each month, see your history and plan the next one' },
   { id: 'settings', label: 'Settings', icon: Settings, blurb: 'Pay rules, CPF and deductions' },
   { id: 'car', label: 'Car', icon: Car, blurb: 'Car loan, running costs and affordability' },
 ];
@@ -65,7 +67,8 @@ export default function App() {
   const [settingsKey, setSettingsKey] = useState(0);
 
   const update = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
-  const { quantities, normalShifts, publicHolidayShifts, fromCalendar, cycle, errors, warnings, result } = usePayrollForm(form, config);
+  const calc = usePayrollForm(form, config);
+  const { quantities, normalShifts, publicHolidayShifts, fromCalendar, cycle, errors, warnings, result } = calc;
 
   const tabIdx = TAB_ITEMS.findIndex((t) => t.id === tab);
   const current = TAB_ITEMS[tabIdx];
@@ -206,6 +209,27 @@ export default function App() {
               />
             )}
 
+            {tab === 'months' && (
+              <MonthsTab
+                form={form}
+                config={config}
+                calc={calc}
+                hidden={hidePay}
+                onLoadMonth={(f) => {
+                  setForm(f);
+                  goTo('calculator');
+                }}
+                onSetTarget={(net) => {
+                  update({ targetNet: String(net) });
+                  goTo('target');
+                }}
+                onImportConfig={(raw) => {
+                  setConfig(migrateConfig(raw));
+                  setSettingsKey((k) => k + 1);
+                }}
+              />
+            )}
+
             {tab === 'settings' && (
               <div className="max-w-4xl">
                 <SettingsPanel
@@ -236,8 +260,8 @@ export default function App() {
         aria-label="Sections"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_8px_rgba(0,0,0,0.03)] lg:hidden"
       >
-        <div role="tablist" className="relative mx-auto grid max-w-xl grid-cols-5">
-          <span aria-hidden className="absolute top-0 left-0 h-[3px] w-1/5 transition-transform duration-300 ease-[cubic-bezier(.3,1.35,.5,1)]" style={{ transform: `translateX(${tabIdx * 100}%)` }}>
+        <div role="tablist" className="relative mx-auto grid max-w-xl grid-cols-6">
+          <span aria-hidden className="absolute top-0 left-0 h-[3px] w-1/6 transition-transform duration-300 ease-[cubic-bezier(.3,1.35,.5,1)]" style={{ transform: `translateX(${tabIdx * 100}%)` }}>
             <span className="mx-auto block h-full w-10 rounded-full bg-accent" />
           </span>
           {TAB_ITEMS.map((t) => {

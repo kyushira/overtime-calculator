@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export const TABS = ['calculator', 'breakdown', 'target', 'settings', 'car'] as const;
+export const TABS = ['calculator', 'breakdown', 'target', 'months', 'settings', 'car'] as const;
 export type Tab = (typeof TABS)[number];
 
 const STORAGE_KEY = 'otcalc.tab.v1';
