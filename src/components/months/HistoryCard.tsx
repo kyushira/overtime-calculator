@@ -12,6 +12,8 @@ interface Props {
 }
 
 const CARD_POS = 'lg:col-start-2 lg:row-span-2 lg:row-start-1';
+/** Below this many saved months the net trend chart is replaced by a hint. */
+const TREND_MIN_MONTHS = 3;
 
 /** Saved months: stats, net trend, and a newest-first list with open / delete. */
 export function HistoryCard({ months, fmt, onOpen, onDelete }: Props) {
@@ -42,22 +44,30 @@ export function HistoryCard({ months, fmt, onOpen, onDelete }: Props) {
       </div>
 
       <div className="mt-5">
-        <SectionLabel>Net trend · last {points.length}</SectionLabel>
-        <div
-          role="img"
-          aria-label={`Net pay, oldest to newest: ${points.map((p) => `${p.label} ${fmt(p.net)}`).join(', ')}`}
-          className="mt-2 flex h-28 items-end gap-2"
-        >
-          {points.map((p, i) => (
-            <div key={p.id} aria-hidden className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
-              <div
-                className={`w-3/5 rounded-t-md transition-[height] duration-500 ease-out ${i === points.length - 1 ? 'bg-accent' : 'bg-ink/80'}`}
-                style={{ height: `${Math.max(4, top > 0 ? (p.net / top) * 100 : 0)}%` }}
-              />
-              <span className="w-full truncate text-center text-[11px] text-slate-500">{p.label}</span>
+        {s.count < TREND_MIN_MONTHS ? (
+          <p role="status" className="rounded-xl bg-slate-100/70 p-4 text-sm text-slate-600">
+            Save {TREND_MIN_MONTHS - s.count} more {TREND_MIN_MONTHS - s.count === 1 ? 'month' : 'months'} to see a trend
+          </p>
+        ) : (
+          <>
+            <SectionLabel>Net trend · last {points.length}</SectionLabel>
+            <div
+              role="img"
+              aria-label={`Net pay, oldest to newest: ${points.map((p) => `${p.label} ${fmt(p.net)}`).join(', ')}`}
+              className="mt-2 flex h-28 items-end gap-2"
+            >
+              {points.map((p, i) => (
+                <div key={p.id} aria-hidden className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
+                  <div
+                    className={`w-3/5 rounded-t-md shadow-[var(--shadow-bar-glow)] transition-[height] duration-500 ease-out ${i === points.length - 1 ? 'bg-accent' : 'bg-ink/80'}`}
+                    style={{ height: `${Math.max(4, top > 0 ? (p.net / top) * 100 : 0)}%` }}
+                  />
+                  <span className="w-full truncate text-center text-[11px] text-slate-500">{p.label}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
 
       <ul className="mt-5 divide-y divide-slate-100 border-t border-slate-100">

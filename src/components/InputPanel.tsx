@@ -1,7 +1,7 @@
 import { Lock, Plus, TriangleAlert, X } from 'lucide-react';
 import type { FormErrors, FormState } from '../types/form';
-import type { OtQuantities, PayCycle, PayrollConfig } from '../types/payroll';
-import { money, MONTHS } from '../utils/format';
+import type { OtQuantities, PayCycle, PayrollConfig, PayResult } from '../types/payroll';
+import { money, MONTHS, num } from '../utils/format';
 import { OtLog } from './OtLog';
 import { Card, ErrorText, Field, inputClass, NumInput, SectionLabel, Segmented } from './ui';
 
@@ -19,10 +19,25 @@ interface Props {
   /** True when totals come from the calendar ("Pick dates" with a valid cycle). */
   fromCalendar: boolean;
   config: PayrollConfig;
+  /** Current payroll result; the live S$ under each OT / shift field reads its line items. */
+  result: PayResult;
+  /** Amounts hidden (eye toggle): no live S$ lines. */
+  hidden: boolean;
 }
 
-export function InputPanel({ form, update, errors, warnings, cycle, quantities, normalShifts, publicHolidayShifts, fromCalendar, config }: Props) {
+/**
+ * Live S$ for one OT / shift field: the same line amount Breakdown shows.
+ * Hidden when the field is empty or zero, or when amounts are hidden. Display only.
+ */
+function LiveAmount({ value, amount, tone, hidden }: { value: string; amount: number | undefined; tone: string; hidden: boolean }) {
+  if (hidden || !(Number(value) > 0) || !amount) return null;
+  return <span className={`mt-1 block text-right text-xs font-medium tabular-nums ${tone}`}>= {money(amount)}</span>;
+}
+
+export function InputPanel({ form, update, errors, warnings, cycle, quantities, normalShifts, publicHolidayShifts, fromCalendar, config, result, hidden }: Props) {
   const perShift = config.rules.shiftAllowancePerShift;
+  const lineAmount = (key: string) => result.earnings.find((l) => l.key === key)?.amount;
+  const { fullShiftHours, saturdayMultiplier, sundayMultiplier } = config.rules;
 
   // Leaving "Pick dates" carries the calendar totals into the typed fields
   // (if any days are marked). Going the other way can't infer dates, so the
@@ -59,6 +74,8 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
               inputMode="numeric"
               maxLength={4}
               value={form.year}
+              pattern="[0-9]{4}"
+              autoComplete="off"
               onChange={(e) => update({ year: e.target.value.replace(/\D/g, '') })}
               className={inputClass(errors.monthYear)}
             />
@@ -87,13 +104,13 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
                 <Lock size={12} strokeWidth={1.75} aria-hidden /> from calendar
               </span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">Auto-counted from weekdays marked worked. Shift allowance {money(perShift)} per shift, weekend OT shifts included.</p>
+            <p className="mt-1 text-xs text-slate-500">Auto-counted from weekdays marked worked. {money(perShift)} allowance each, weekend OT shifts included.</p>
           </div>
         ) : (
           <Field
             label="Normal shifts worked"
             error={errors.normalShifts}
-            hint={`Weekday shifts only. Shift allowance ${money(perShift)} per shift; weekend and public-holiday shifts get it automatically.`}
+            hint={`Weekday shifts only. ${money(perShift)} allowance each.`}
           >
             <NumInput value={form.normalShifts} onChange={(v) => update({ normalShifts: v })} error={errors.normalShifts} step="1" suffix="shifts" ariaLabel="Normal shifts worked" />
           </Field>
@@ -101,16 +118,36 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
 
         {form.inputMode === 'totals' || !cycle ? (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Weekday OT" error={errors.weekdayOtHours} hint="Quarter hours OK, e.g. 6.25">
-              <NumInput value={form.weekdayOtHours} onChange={(v) => update({ weekdayOtHours: v })} error={errors.weekdayOtHours} step="0.25" suffix="hrs" />
+            <Field
+              label="Weekday OT"
+              error={errors.weekdayOtHours}
+              hint="Quarter hours OK, e.g. 6.25"
+              aside={<LiveAmount value={form.weekdayOtHours} amount={lineAmount('ot-weekday')} tone="text-accent" hidden={hidden} />}
+            >
+              <NumInput value={form.weekdayOtHours} onChange={(v) => update({ weekdayOtHours: v })} error={errors.weekdayOtHours} step="0.25" suffix="hrs" ariaLabel="Weekday OT hours" />
             </Field>
-            <Field label="Saturday shifts" error={errors.saturdayShifts} hint={`Enter manually. Each shift = ${config.rules.fullShiftHours} hrs at ${config.rules.saturdayMultiplier}x.`}>
-              <NumInput value={form.saturdayShifts} onChange={(v) => update({ saturdayShifts: v })} error={errors.saturdayShifts} step="1" suffix="shifts" />
+            <Field
+              label="Saturday shifts"
+              error={errors.saturdayShifts}
+              hint={`Number of Saturday shifts (${num(fullShiftHours)} hrs each, ${saturdayMultiplier}x). ${money(perShift)} allowance added.`}
+              aside={<LiveAmount value={form.saturdayShifts} amount={lineAmount('ot-saturday')} tone="text-sat" hidden={hidden} />}
+            >
+              <NumInput value={form.saturdayShifts} onChange={(v) => update({ saturdayShifts: v })} error={errors.saturdayShifts} step="1" suffix="shifts" ariaLabel="Saturday shifts" />
             </Field>
-            <Field label="Sunday shifts" error={errors.sundayShifts} hint={`Enter manually. Rest day, paid at ${config.rules.sundayMultiplier}x per shift.`}>
-              <NumInput value={form.sundayShifts} onChange={(v) => update({ sundayShifts: v })} error={errors.sundayShifts} step="1" suffix="shifts" />
+            <Field
+              label="Sunday shifts"
+              error={errors.sundayShifts}
+              hint={`Number of Sunday shifts (${sundayMultiplier}x). ${money(perShift)} allowance added.`}
+              aside={<LiveAmount value={form.sundayShifts} amount={lineAmount('ot-sunday')} tone="text-sun" hidden={hidden} />}
+            >
+              <NumInput value={form.sundayShifts} onChange={(v) => update({ sundayShifts: v })} error={errors.sundayShifts} step="1" suffix="shifts" ariaLabel="Sunday shifts" />
             </Field>
-            <Field label="Public holiday shifts" error={errors.publicHolidayShifts} hint={`Enter manually. Paid like Sunday, ${config.rules.sundayMultiplier}x.`}>
+            <Field
+              label="Public holiday shifts"
+              error={errors.publicHolidayShifts}
+              hint={`Number of PH shifts (${sundayMultiplier}x, same as Sunday). ${money(perShift)} allowance added.`}
+              aside={<LiveAmount value={form.publicHolidayShifts} amount={lineAmount('ot-ph')} tone="text-ph" hidden={hidden} />}
+            >
               <NumInput value={form.publicHolidayShifts} onChange={(v) => update({ publicHolidayShifts: v })} error={errors.publicHolidayShifts} step="1" suffix="shifts" ariaLabel="Public holiday shifts" />
             </Field>
           </div>

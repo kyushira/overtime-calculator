@@ -1,7 +1,7 @@
 import { ArrowRight, CircleCheck } from 'lucide-react';
 import { useMemo, type CSSProperties } from 'react';
 import type { OtQuantities, PayCycle, PayrollConfig, TargetResult } from '../types/payroll';
-import { money, num } from '../utils/format';
+import { money, moneyWhole, num } from '../utils/format';
 import { findMinimumCombo, targetBase } from '../utils/payroll';
 import { parseNonNegative } from '../utils/validation';
 import { Badge, btnPrimary, Card, ErrorText, Field, NumInput, SectionLabel } from './ui';
@@ -101,8 +101,21 @@ export function TargetMode({ targetNet, onTargetChange, cycle, config, onApply }
         <div className="min-w-0">
           {!cycle && <ErrorText>Fix the month/year to use target mode.</ErrorText>}
           {cycle && !outcome && !parsed.error && (
-            <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
-              Enter a target to see the minimum combo.
+            <div className="rounded-xl bg-slate-100/70 p-6 text-center">
+              <p className="text-sm font-medium text-slate-900">Enter a target net pay above</p>
+              <p className="mt-1 text-xs text-slate-500">Or try an example:</p>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                {[3000, 3500].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => onTargetChange(String(v))}
+                    className="min-h-11 rounded-full border border-slate-200 bg-surface px-4 text-sm font-medium tabular-nums text-slate-900 transition duration-150 ease-out hover:border-slate-300 hover:bg-slate-50 active:scale-[0.97]"
+                  >
+                    {moneyWhole(v)}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {outcome && (

@@ -7,6 +7,7 @@ export function AppearanceCard({ theme, onThemeChange }: { theme: ThemePref; onT
     <Card title="Appearance" subtitle="Auto follows your device setting. Saved in this browser.">
       <div className="max-w-sm">
         <Segmented<ThemePref>
+          accentSelected
           ariaLabel="Appearance"
           value={theme}
           options={THEME_PREFS.map((p) => ({ value: p, label: THEME_LABEL[p] }))}

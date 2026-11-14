@@ -60,7 +60,7 @@ export function SettingsPanel({ config, onChange, onReset }: Props) {
 
   return (
     <Card
-      title="Settings — pay rules"
+      title="Pay rules"
       subtitle="Edit when payroll rules change. Saved in this browser."
       actions={
         <div className="flex gap-2">

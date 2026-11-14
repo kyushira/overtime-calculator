@@ -2,7 +2,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 
 /* Shared class strings for buttons (8px radius controls, pills fully rounded). */
 export const btnPrimary =
-  'inline-flex items-center justify-center gap-1.5 rounded-lg bg-ink px-3.5 py-2 text-sm font-medium text-on-ink shadow-[var(--shadow-glow-accent)] transition duration-150 ease-out hover:bg-slate-800 dark:hover:bg-slate-600 active:scale-[0.97]';
+  'inline-flex items-center justify-center gap-1.5 rounded-lg bg-btn px-3.5 py-2 text-sm font-medium text-on-btn shadow-[var(--shadow-glow-accent)] transition duration-150 ease-out hover:bg-btn-hover active:scale-[0.97]';
 export const btnOutline =
   'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-surface px-3 py-1.5 text-sm font-medium text-slate-700 transition duration-150 ease-out hover:border-slate-300 hover:bg-slate-50 active:scale-[0.97]';
 export const btnGhost =
@@ -34,7 +34,7 @@ export function Card({ title, subtitle, actions, children, className = '', index
   return (
     <section
       style={{ '--i': index } as CSSProperties}
-      className={`min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-[var(--shadow-card)] ${flush ? '' : 'p-4 sm:p-5'} ${animate ? 'anim-fade-up' : ''} ${className}`}
+      className={`min-w-0 overflow-hidden rounded-xl border border-card-border bg-surface shadow-[var(--shadow-card)] ${flush ? '' : 'p-4 sm:p-5'} ${animate ? 'anim-fade-up' : ''} ${className}`}
     >
       {(title || actions) && (
         <header className={`mb-4 flex flex-wrap items-start justify-between gap-2 ${flush ? 'px-4 pt-4 sm:px-5 sm:pt-5' : ''}`}>
@@ -54,10 +54,12 @@ export function ErrorText({ children }: { children: ReactNode }) {
   return <span role="alert" className="anim-slide-in mt-1 block text-xs text-bad">{children}</span>;
 }
 
-export function Field({ label, hint, error, children, className = '' }: {
+export function Field({ label, hint, error, aside, children, className = '' }: {
   label: ReactNode;
   hint?: ReactNode;
   error?: string;
+  /** Small line under the control (e.g. a live S$ amount), right-aligned by the caller. */
+  aside?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
@@ -65,6 +67,7 @@ export function Field({ label, hint, error, children, className = '' }: {
     <label className={`block min-w-0 ${className}`}>
       <span className="mb-1.5 block text-[13px] font-medium text-slate-700">{label}</span>
       {children}
+      {aside}
       {error ? <ErrorText key={error}>{error}</ErrorText> : hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
     </label>
   );
@@ -74,7 +77,7 @@ export function Field({ label, hint, error, children, className = '' }: {
 const inputBase =
   'min-h-11 w-full rounded-lg border bg-surface px-3 py-2 text-sm text-slate-900 outline-none transition duration-150 ease-out placeholder:text-slate-400 focus:ring-[3px]';
 
-/** Zero or empty-looking number text ("0", "0.00"); unset strings are not zero. */
+/** Zero number text ("0", "0.00"); an empty string is not zero. */
 export function isZeroText(v: string): boolean {
   return v.trim() !== '' && Number(v) === 0;
 }
@@ -85,9 +88,9 @@ export function inputClass(error?: string) {
 
 /**
  * Number input backed by a string so users can type freely; parent validates.
- * A stored "0" that isn't focused shows the grey placeholder instead, so it
- * doesn't read as a typed value. The stored string is unchanged; focusing
- * selects it so the first keystroke replaces the 0.
+ * No default placeholder: an empty field stays blank (the unit suffix says what
+ * to type), so it never looks like it already holds a value. Focusing a stored
+ * zero selects it so the first keystroke replaces it.
  */
 export function NumInput({ value, onChange, error, step = 'any', placeholder, suffix, prefix, ariaLabel }: {
   value: string;
@@ -99,8 +102,6 @@ export function NumInput({ value, onChange, error, step = 'any', placeholder, su
   prefix?: string;
   ariaLabel?: string;
 }) {
-  const [focused, setFocused] = useState(false);
-  const shown = focused || !isZeroText(value) ? value : '';
   return (
     <div className="relative">
       {prefix && <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400">{prefix}</span>}
@@ -109,15 +110,13 @@ export function NumInput({ value, onChange, error, step = 'any', placeholder, su
         inputMode="decimal"
         min={0}
         step={step}
-        value={shown}
-        placeholder={placeholder ?? '0'}
+        value={value}
+        placeholder={placeholder}
         aria-label={ariaLabel}
         aria-invalid={!!error}
         onFocus={(e) => {
-          setFocused(true);
           if (isZeroText(value)) e.currentTarget.select();
         }}
-        onBlur={() => setFocused(false)}
         onChange={(e) => onChange(e.target.value)}
         className={`${inputClass(error)} ${prefix ? 'pl-10' : ''} ${suffix ? 'pr-14' : ''}`}
       />
@@ -126,20 +125,21 @@ export function NumInput({ value, onChange, error, step = 'any', placeholder, su
   );
 }
 
-/** Segmented control with a sliding active indicator. */
-export function Segmented<T extends string>({ value, options, onChange, ariaLabel, size = 'md' }: {
+/** Segmented control with a sliding active indicator. `accentSelected`: selected segment gets accent text + glow. */
+export function Segmented<T extends string>({ value, options, onChange, ariaLabel, size = 'md', accentSelected = false }: {
   value: T;
   options: { value: T; label: ReactNode }[];
   onChange: (v: T) => void;
   ariaLabel?: string;
   size?: 'sm' | 'md';
+  accentSelected?: boolean;
 }) {
   const idx = Math.max(0, options.findIndex((o) => o.value === value));
   return (
     <div role="radiogroup" aria-label={ariaLabel} className="relative flex w-full rounded-lg bg-slate-100 p-1">
       <span
         aria-hidden
-        className="absolute inset-y-1 left-1 rounded-md bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.08)] ring-1 ring-slate-200 transition-transform duration-200 ease-out"
+        className={`absolute inset-y-1 left-1 rounded-md bg-surface ring-1 ring-slate-200 transition-transform duration-200 ease-out ${accentSelected ? 'shadow-[var(--shadow-glow-accent)]' : 'shadow-[0_1px_2px_rgba(0,0,0,0.08)]'}`}
         style={{ width: `calc((100% - 0.5rem) / ${options.length})`, transform: `translateX(${idx * 100}%)` }}
       />
       {options.map((o) => (
@@ -150,7 +150,9 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={`relative z-10 flex-1 whitespace-nowrap rounded-md px-2 font-medium transition-colors duration-200 ${size === 'sm' ? 'py-1 text-xs' : 'min-h-11 py-1.5 text-sm'} ${
-            value === o.value ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
+            value === o.value
+              ? accentSelected ? 'font-semibold text-accent' : 'text-slate-900'
+              : 'text-slate-500 hover:text-slate-800'
           }`}
         >
           {o.label}
