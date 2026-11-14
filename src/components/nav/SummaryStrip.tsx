@@ -2,10 +2,10 @@ import { ChevronDown } from 'lucide-react';
 import type { PayResult } from '../../types/payroll';
 import { money } from '../../utils/format';
 
-const MASK = '$ ••••';
+const MASK = 'S$ ••••';
 
 /**
- * One-line summary for tabs other than Calculator: "November 2026 · Net $2,734.00".
+ * One-line summary for tabs other than Calculator: "November 2026 · Net S$2,734.00".
  * Tapping expands the full 2×2 grid (rendered by the parent). aria-expanded carries the state.
  */
 export function SummaryStrip({ result, hidden, periodLabel, expanded, onToggle }: {

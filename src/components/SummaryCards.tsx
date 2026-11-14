@@ -17,10 +17,10 @@ interface Tile {
   hero?: boolean;
 }
 
-const MASK = '$ ••••';
+const MASK = 'S$ ••••';
 
-/** Value with a crossfade / blur to a mask when pay figures are hidden. */
-function TileValue({ value, negative, hidden, hero }: { value: number; negative?: boolean; hidden: boolean; hero?: boolean }) {
+/** Value with a crossfade / blur to a mask when pay figures are hidden. The image label names the tile too. */
+function TileValue({ label, value, negative, hidden, hero }: { label: string; value: number; negative?: boolean; hidden: boolean; hero?: boolean }) {
   const v = useTween(value, hero ? 600 : 400);
   // After the fade-out, drop the real figure from the DOM so it can't be read or copied.
   const [gone, setGone] = useState(hidden);
@@ -34,7 +34,7 @@ function TileValue({ value, negative, hidden, hero }: { value: number; negative?
     <div
       className={`grid tabular-nums tracking-[-0.02em] text-slate-900 ${hero ? 'text-[22px] font-extrabold sm:text-2xl lg:text-xl' : 'text-[15px] font-bold sm:text-2xl lg:text-xl'}`}
       role="img"
-      aria-label={hidden ? 'hidden' : `${negative ? 'minus ' : ''}${money(value)}`}
+      aria-label={`${label} ${hidden ? 'hidden' : `${negative ? 'minus ' : ''}${money(value)}`}`}
     >
       <span aria-hidden className={`col-start-1 row-start-1 truncate transition-[opacity,filter] duration-200 ease-out ${hidden ? 'opacity-0 blur-sm' : 'opacity-100 blur-0'}`}>
         {gone ? MASK : negative ? `−${money(v)}` : money(v)}
@@ -104,7 +104,7 @@ export function SummaryCards({ result, hidden, compact = false, periodLabel }: {
             )}
             <div className="relative">
               <div className="truncate text-[11px] font-medium text-slate-500 sm:text-[13px]">{t.label}</div>
-              <TileValue value={t.value} negative={t.negative} hidden={hidden} hero={t.hero} />
+              <TileValue label={t.label} value={t.value} negative={t.negative} hidden={hidden} hero={t.hero} />
               <div className="mt-1.5 hidden sm:block">
                 <span className="inline-flex items-center rounded-full bg-surface/70 px-1.5 py-0.5 text-[11px] font-medium text-slate-500">{hidden && t.subMoney ? 'OT ••••' : t.sub}</span>
               </div>
