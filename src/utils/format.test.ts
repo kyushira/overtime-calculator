@@ -24,7 +24,7 @@ describe('money', () => {
   });
 
   it('puts the minus before S$ and drops it when the value rounds to zero', () => {
-    expect(money(-12)).toBe('-S$12.00');
+    expect(money(-12)).toBe('−S$12.00');
     expect(money(-0.001)).toBe('S$0.00');
   });
 });
@@ -33,7 +33,7 @@ describe('moneyWhole', () => {
   it('shows whole dollars with no cents', () => {
     expect(moneyWhole(90000)).toBe('S$90,000');
     expect(moneyWhole(1234.4)).toBe('S$1,234');
-    expect(moneyWhole(-500)).toBe('-S$500');
+    expect(moneyWhole(-500)).toBe('−S$500');
   });
 });
 

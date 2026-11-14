@@ -1,13 +1,13 @@
-/* Money is always shown as S$ (Singapore dollars), e.g. S$1,234.50 or -S$12.00. */
+/* Money is always shown as S$ (Singapore dollars), e.g. S$1,234.50 or −S$12.00 (U+2212, as signedMoney). */
 const amountFmt = new Intl.NumberFormat('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const wholeFmt = new Intl.NumberFormat('en-SG', { maximumFractionDigits: 0 });
 
 /** Sign prefix for a formatted magnitude: a value that rounds to zero never shows a minus. */
 function signFor(n: number, body: string): string {
-  return n < 0 && Number(body.replace(/,/g, '')) !== 0 ? '-' : '';
+  return n < 0 && Number(body.replace(/,/g, '')) !== 0 ? '−' : '';
 }
 
-/** S$1,234.50 (cents). Negatives: -S$12.00. */
+/** S$1,234.50 (cents). Negatives: −S$12.00. */
 export const money = (n: number): string => {
   const body = amountFmt.format(Math.abs(n));
   return `${signFor(n, body)}S$${body}`;
