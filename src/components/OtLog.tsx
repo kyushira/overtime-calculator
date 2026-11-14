@@ -38,11 +38,11 @@ const VIEW_MARGIN = 8;
 
 /** Colour per calendar state. Shared by the day buttons and the legend. */
 function dayStyle(kind: DayKind, status: DayStatus | undefined) {
-  if (!status) return kind === 'weekday' ? 'bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300' : 'bg-slate-100 text-slate-400 ring-1 ring-slate-200 hover:ring-slate-300';
+  if (!status) return kind === 'weekday' ? 'bg-surface text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300' : 'bg-slate-100 text-slate-400 ring-1 ring-slate-200 hover:ring-slate-300';
   if (status === 'ph') return 'bg-ph-bg text-ph ring-1 ring-ph/45';
   if (kind === 'sunday') return 'bg-sun-bg text-sun ring-1 ring-sun/35';
   if (kind === 'saturday') return 'bg-sat-bg text-sat ring-1 ring-sat/35';
-  if (status === 'ot') return 'bg-accent text-white ring-1 ring-accent';
+  if (status === 'ot') return 'bg-accent-solid text-white ring-1 ring-accent';
   if (status === 'otLong') return 'bg-accent-dark text-white ring-1 ring-accent-dark';
   return 'bg-good-bg text-good ring-1 ring-good/35';
 }
@@ -194,7 +194,7 @@ export function OtLog({ cycle, entries, onChange, otHours, totals, shiftAllowanc
       <div className="relative">
         {toast && (
           <div key={toast.id} role="status" className="anim-toast pointer-events-none absolute inset-x-0 -top-1 z-10 flex justify-center">
-            <span className="rounded-full bg-ink px-3 py-1.5 text-xs font-medium text-white shadow-[var(--shadow-lift)]">{toast.text}</span>
+            <span className="rounded-full bg-ink px-3 py-1.5 text-xs font-medium text-on-ink shadow-[var(--shadow-lift)]">{toast.text}</span>
           </div>
         )}
         <div className="grid grid-cols-7 gap-1 text-center">
@@ -249,7 +249,7 @@ export function OtLog({ cycle, entries, onChange, otHours, totals, shiftAllowanc
                     <span aria-hidden className="hold-ring pointer-events-none absolute -inset-2 rounded-xl border-2 border-accent" />
                     {/* Floating cue above the finger. */}
                     <span aria-hidden className="pointer-events-none absolute -top-9 left-1/2 z-20 -translate-x-1/2">
-                      <span className="hold-label block whitespace-nowrap rounded-full bg-ink px-2 py-1 text-[10px] font-medium text-white">Hold…</span>
+                      <span className="hold-label block whitespace-nowrap rounded-full bg-ink px-2 py-1 text-[10px] font-medium text-on-ink">Hold…</span>
                     </span>
                   </>
                 )}
@@ -263,7 +263,7 @@ export function OtLog({ cycle, entries, onChange, otHours, totals, shiftAllowanc
         <button type="button" onClick={() => onChange(markAllWorked(entries, cycle, 'weekday'))} className={`${chip} border-good/25 bg-good-bg text-good hover:border-good/50`}><CalendarCheck {...ic} />All weekdays worked</button>
         <button type="button" onClick={() => onChange(markAllWorked(entries, cycle, 'sunday'))} className={`${chip} border-sun/25 bg-sun-bg text-sun hover:border-sun/50`}><Moon {...ic} />All Sundays</button>
         <button type="button" onClick={() => onChange(markAllWorked(entries, cycle, 'saturday'))} className={`${chip} border-sat/25 bg-sat-bg text-sat hover:border-sat/50`}><Sun {...ic} />All Saturdays</button>
-        <button type="button" onClick={() => onChange(clearCycle(entries, cycle))} className={`${chip} border-slate-200 bg-white text-slate-600 hover:bg-slate-50`}><Eraser {...ic} />Clear cycle</button>
+        <button type="button" onClick={() => onChange(clearCycle(entries, cycle))} className={`${chip} border-slate-200 bg-surface text-slate-600 hover:bg-slate-50`}><Eraser {...ic} />Clear cycle</button>
       </div>
 
       <div className="rounded-xl bg-slate-100/70 p-3.5 text-sm">
@@ -357,7 +357,7 @@ function HoldMenu({ menu, status, otHours, onChoose, onClose }: {
       role="menu"
       aria-label={`Options for ${formatDate(d)}`}
       data-hold-menu
-      className={`fixed z-50 w-60 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_12px_32px_rgba(16,24,40,0.16)] ${pos ? 'anim-menu-in' : 'invisible'}`}
+      className={`fixed z-50 w-60 rounded-xl border border-slate-200 bg-surface p-1.5 shadow-[0_12px_32px_rgba(16,24,40,0.16)] ${pos ? 'anim-menu-in' : 'invisible'}`}
       style={{
         left: pos?.left ?? 0,
         top: pos?.top ?? 0,
@@ -393,7 +393,7 @@ function HoldMenu({ menu, status, otHours, onChoose, onClose }: {
         role="menuitemradio"
         aria-checked={status === 'ph'}
         onClick={() => onChoose('ph')}
-        className={`${opt} min-h-11 mt-1 ${status === 'ph' ? 'bg-ph text-white' : 'text-slate-900 hover:bg-ph-bg'}`}
+        className={`${opt} min-h-11 mt-1 ${status === 'ph' ? 'bg-ph-solid text-white' : 'text-slate-900 hover:bg-ph-bg'}`}
       >
         <span className={`flex size-7 items-center justify-center rounded-md ${status === 'ph' ? 'bg-white/15' : 'bg-ph-bg text-ph'}`}><Landmark size={16} strokeWidth={1.75} aria-hidden /></span>
         <span className="flex-1">

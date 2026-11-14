@@ -2,9 +2,9 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 
 /* Shared class strings for buttons (8px radius controls, pills fully rounded). */
 export const btnPrimary =
-  'inline-flex items-center justify-center gap-1.5 rounded-lg bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-150 ease-out hover:bg-slate-800 active:scale-[0.97]';
+  'inline-flex items-center justify-center gap-1.5 rounded-lg bg-ink px-3.5 py-2 text-sm font-medium text-on-ink shadow-[var(--shadow-glow-accent)] transition duration-150 ease-out hover:bg-slate-800 dark:hover:bg-slate-600 active:scale-[0.97]';
 export const btnOutline =
-  'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition duration-150 ease-out hover:border-slate-300 hover:bg-slate-50 active:scale-[0.97]';
+  'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-surface px-3 py-1.5 text-sm font-medium text-slate-700 transition duration-150 ease-out hover:border-slate-300 hover:bg-slate-50 active:scale-[0.97]';
 export const btnGhost =
   'inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-600 transition duration-150 ease-out hover:bg-slate-100 hover:text-slate-900 active:scale-[0.97]';
 export const pillBtn =
@@ -34,7 +34,7 @@ export function Card({ title, subtitle, actions, children, className = '', index
   return (
     <section
       style={{ '--i': index } as CSSProperties}
-      className={`min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-card)] ${flush ? '' : 'p-4 sm:p-5'} ${animate ? 'anim-fade-up' : ''} ${className}`}
+      className={`min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-[var(--shadow-card)] ${flush ? '' : 'p-4 sm:p-5'} ${animate ? 'anim-fade-up' : ''} ${className}`}
     >
       {(title || actions) && (
         <header className={`mb-4 flex flex-wrap items-start justify-between gap-2 ${flush ? 'px-4 pt-4 sm:px-5 sm:pt-5' : ''}`}>
@@ -71,7 +71,7 @@ export function Field({ label, hint, error, children, className = '' }: {
 }
 
 const inputBase =
-  'w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 outline-none transition duration-150 ease-out placeholder:text-slate-400 focus:ring-[3px]';
+  'w-full rounded-lg border bg-surface px-3 py-2 text-sm text-slate-900 outline-none transition duration-150 ease-out placeholder:text-slate-400 focus:ring-[3px]';
 
 export function inputClass(error?: string) {
   return `${inputBase} ${error ? 'border-bad/60 focus:ring-bad/15' : 'border-slate-200 hover:border-slate-300 focus:border-slate-400 focus:ring-slate-900/[0.06]'}`;
@@ -121,7 +121,7 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
     <div role="radiogroup" aria-label={ariaLabel} className="relative flex w-full rounded-lg bg-slate-100 p-1">
       <span
         aria-hidden
-        className="absolute inset-y-1 left-1 rounded-md bg-white shadow-[0_1px_2px_rgba(0,0,0,0.08)] ring-1 ring-slate-200 transition-transform duration-200 ease-out"
+        className="absolute inset-y-1 left-1 rounded-md bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.08)] ring-1 ring-slate-200 transition-transform duration-200 ease-out"
         style={{ width: `calc((100% - 0.5rem) / ${options.length})`, transform: `translateX(${idx * 100}%)` }}
       />
       {options.map((o) => (

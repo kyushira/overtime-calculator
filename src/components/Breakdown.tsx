@@ -7,13 +7,14 @@ import { Card, SectionLabel } from './ui';
 type Cat = 'basic' | 'allowance' | 'weekday' | 'saturday' | 'sunday' | 'ph' | 'deduction';
 
 const CAT: Record<Cat, { label: string; short?: string; tint: string; ring: string; fill: string }> = {
-  basic: { label: 'Basic', tint: 'bg-slate-100', ring: 'text-slate-600', fill: '#4b5563' },
-  allowance: { label: 'Allowances', short: 'Allow.', tint: 'bg-good-bg', ring: 'text-good', fill: '#22a861' },
-  weekday: { label: 'Weekday OT', short: 'Wkday', tint: 'bg-accent-bg', ring: 'text-accent', fill: '#5b4bd6' },
-  saturday: { label: 'Saturday', short: 'Sat', tint: 'bg-sat-bg', ring: 'text-sat', fill: '#e39a2d' },
-  sunday: { label: 'Sunday', short: 'Sun', tint: 'bg-sun-bg', ring: 'text-sun', fill: '#db2c5a' },
-  ph: { label: 'Public holiday', short: 'PH', tint: 'bg-ph-bg', ring: 'text-ph', fill: '#3b82f6' },
-  deduction: { label: 'Deduction', tint: 'bg-bad-bg', ring: 'text-bad', fill: '#e5484d' },
+  // Fills are theme tokens (CSS vars), applied via style= so they resolve per theme.
+  basic: { label: 'Basic', tint: 'bg-slate-100', ring: 'text-slate-600', fill: 'var(--color-chart-basic)' },
+  allowance: { label: 'Allowances', short: 'Allow.', tint: 'bg-good-bg', ring: 'text-good', fill: 'var(--color-chart-allowance)' },
+  weekday: { label: 'Weekday OT', short: 'Wkday', tint: 'bg-accent-bg', ring: 'text-accent', fill: 'var(--color-chart-weekday)' },
+  saturday: { label: 'Saturday', short: 'Sat', tint: 'bg-sat-bg', ring: 'text-sat', fill: 'var(--color-chart-saturday)' },
+  sunday: { label: 'Sunday', short: 'Sun', tint: 'bg-sun-bg', ring: 'text-sun', fill: 'var(--color-chart-sunday)' },
+  ph: { label: 'Public holiday', short: 'PH', tint: 'bg-ph-bg', ring: 'text-ph', fill: 'var(--color-chart-ph)' },
+  deduction: { label: 'Deduction', tint: 'bg-bad-bg', ring: 'text-bad', fill: 'var(--color-chart-deduction)' },
 };
 
 function catOf(key: string): Cat {
@@ -86,7 +87,7 @@ function GrossSplit({ result }: { result: PayResult }) {
                     cx={x0 + c * PITCH + PITCH / 2}
                     cy={height - r * PITCH - PITCH / 2}
                     r={R}
-                    fill={on ? CAT[p.cat].fill : '#e2e2e6'}
+                    style={{ fill: on ? CAT[p.cat].fill : 'var(--color-chart-track)' }}
                     opacity={on ? 0.55 + 0.45 * (r / Math.max(1, filledRows)) : 1}
                   />,
                 );
@@ -95,7 +96,7 @@ function GrossSplit({ result }: { result: PayResult }) {
             return (
               <g key={p.cat}>
                 <g className="anim-grow-y" style={{ '--i': ci } as CSSProperties}>{dots}</g>
-                <text x={x0 + colW / 2} y={height + 13} textAnchor="middle" fontSize="8.5" fill="#9ca3af" fontFamily="inherit">
+                <text x={x0 + colW / 2} y={height + 13} textAnchor="middle" fontSize="8.5" className="fill-chart-label" fontFamily="inherit">
                   {CAT[p.cat].short ?? CAT[p.cat].label}
                 </text>
               </g>

@@ -9,9 +9,12 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { SummaryCards } from './components/SummaryCards';
 import { TargetMode } from './components/TargetMode';
 import { btnOutline, SectionLabel } from './components/ui';
+import { AppearanceCard } from './components/AppearanceCard';
+import { ThemeToggle } from './components/ThemeToggle';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { usePayrollForm } from './hooks/usePayrollForm';
 import { type Tab, useTab } from './hooks/useTab';
+import { useTheme } from './hooks/useTheme';
 import type { FormState } from './types/form';
 import type { OtQuantities, PayrollConfig } from './types/payroll';
 import { DEFAULT_CONFIG, DEFAULT_NORMAL_SHIFTS } from './utils/defaults';
@@ -51,7 +54,7 @@ const NAV_ROW = 44; // px: 40px item + 4px gap, used by the sliding indicator
 
 function Logo() {
   return (
-    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ink text-on-ink">
       <Calculator size={16} strokeWidth={1.75} aria-hidden />
     </div>
   );
@@ -65,6 +68,8 @@ export default function App() {
   const [hidePay, setHidePay] = useLocalStorage<boolean>('otcalc.hidePay.v1', false, (raw) => raw === true);
   // Bumped on reset so settings inputs remount with fresh values.
   const [settingsKey, setSettingsKey] = useState(0);
+  // One theme state for the whole app: header toggle and Settings share it.
+  const theme = useTheme();
 
   const update = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
   const calc = usePayrollForm(form, config);
@@ -95,9 +100,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="app-bg min-h-screen bg-page text-slate-900">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-slate-200 bg-white px-3 py-4 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-slate-200 bg-surface px-3 py-4 lg:flex">
         <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 px-2.5 py-2">
           <Logo />
           <div className="min-w-0">
@@ -111,7 +116,7 @@ export default function App() {
           {/* Sliding active indicator: outlined box with a thin left accent bar. */}
           <span
             aria-hidden
-            className="absolute inset-x-0 top-0 h-10 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[var(--shadow-card)] transition-transform duration-250 ease-out"
+            className="absolute inset-x-0 top-0 h-10 overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-[var(--shadow-card)] transition-transform duration-250 ease-out"
             style={{ transform: `translateY(${tabIdx * NAV_ROW}px)` }}
           >
             <span className="absolute inset-y-0 left-0 w-[3px] bg-ink" />
@@ -149,7 +154,7 @@ export default function App() {
 
       <div className="lg:pl-60">
         {/* Top bar */}
-        <header className="border-b border-slate-200 bg-white">
+        <header className="border-b border-slate-200 bg-surface">
           <div className="mx-auto flex max-w-6xl items-center gap-2.5 px-3 py-2.5 sm:px-6 lg:h-16 lg:py-0">
             <span className="lg:hidden"><Logo /></span>
             <div className="min-w-0">
@@ -159,13 +164,14 @@ export default function App() {
               </h1>
               <p className="hidden truncate text-[13px] text-slate-500 sm:block">{current.blurb}</p>
             </div>
+            <ThemeToggle pref={theme.pref} onCycle={theme.cyclePref} className="ml-auto" />
           </div>
         </header>
 
         {/* Pinned KPI tiles */}
         {/* The car tab has its own figures, so the OT pay tiles are not shown there. */}
         {tab !== 'car' && (
-          <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+          <div className="sticky top-0 z-20 border-b border-slate-200 bg-surface/90 backdrop-blur-md">
             <div className="mx-auto max-w-6xl px-3 py-2 sm:px-6 sm:py-4">
               <SummaryCards result={result} hidden={hidePay} onToggleHidden={() => setHidePay((h) => !h)} />
             </div>
@@ -231,7 +237,8 @@ export default function App() {
             )}
 
             {tab === 'settings' && (
-              <div className="max-w-4xl">
+              <div className="max-w-4xl space-y-4">
+                <AppearanceCard theme={theme.pref} onThemeChange={theme.setPref} />
                 <SettingsPanel
                   key={settingsKey}
                   config={config}
@@ -258,7 +265,7 @@ export default function App() {
       {/* Mobile / tablet bottom tab bar (thumb reach) */}
       <nav
         aria-label="Sections"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_8px_rgba(0,0,0,0.03)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_8px_rgba(0,0,0,0.03)] lg:hidden"
       >
         <div role="tablist" className="relative mx-auto grid max-w-xl grid-cols-6">
           <span aria-hidden className="absolute top-0 left-0 h-[3px] w-1/6 transition-transform duration-300 ease-[cubic-bezier(.3,1.35,.5,1)]" style={{ transform: `translateX(${tabIdx * 100}%)` }}>

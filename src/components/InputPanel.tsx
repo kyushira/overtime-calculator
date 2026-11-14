@@ -83,7 +83,7 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
               aria-label={`Normal shifts worked: ${normalShifts}, counted from the calendar`}
             >
               <span className="font-semibold tabular-nums text-slate-900">{normalShifts} shifts</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
                 <Lock size={12} strokeWidth={1.75} aria-hidden /> from calendar
               </span>
             </div>

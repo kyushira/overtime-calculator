@@ -1,11 +1,15 @@
 @import "@fontsource-variable/inter/wght.css";
 @import "tailwindcss";
 
+/* Class-based dark variant: `.dark` is set on <html> by the theme script (see index.html). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * Design tokens (light dashboard style).
  * The slate scale is remapped to the neutral grays of the reference so every
  * `slate-*` utility picks up the new look:
  *   text #111827 / #6B7280 / #9CA3AF, borders #ECECEE, muted surface #F6F6F7.
+ * Dark values live in `:root.dark` below; components only use token names.
  */
 @theme {
   --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -22,6 +26,25 @@
   --color-slate-900: #111827;
 
   --color-ink: #111111;
+  /* Page background, raised surfaces (cards, inputs, sticky bars), text on ink. */
+  --color-page: #ffffff;
+  --color-surface: #ffffff;
+  --color-on-ink: #ffffff;
+  /* Solid fills that carry white text. Same hue in both themes. */
+  --color-accent-solid: #5b4bd6;
+  --color-ph-solid: #2563eb;
+
+  /* Chart / category colours (bars, dots, donut segments). */
+  --color-chart-basic: #4b5563;
+  --color-chart-allowance: #22a861;
+  --color-chart-weekday: #5b4bd6;
+  --color-chart-saturday: #e39a2d;
+  --color-chart-sunday: #db2c5a;
+  --color-chart-ph: #3b82f6;
+  --color-chart-deduction: #e5484d;
+  --color-chart-instalment: #5b4bd6;
+  --color-chart-track: #e2e2e6;
+  --color-chart-label: #9ca3af;
 
   /* KPI tile tints */
   --color-tile-blue: #eef4fd;
@@ -49,8 +72,92 @@
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-lift: 0 6px 16px rgba(16, 24, 40, 0.07);
+  /* Coloured glows: off in light, set in :root.dark. */
+  --shadow-glow-blue: none;
+  --shadow-glow-mint: none;
+  --shadow-glow-lav: none;
+  --shadow-glow-peach: none;
+  --shadow-glow-accent: none;
 
   --ease-out-soft: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/*
+ * Dark theme: remap the same token names so existing utilities flip.
+ * Keep every small-text token at >=4.5:1 on the page, surface and tile tints
+ * (WCAG AA). Adjust a value here, not the components.
+ */
+:root.dark {
+  color-scheme: dark;
+
+  --color-slate-50: #10131d;
+  --color-slate-100: #1b1f2e;
+  --color-slate-200: #272c3d;
+  --color-slate-300: #353b4f;
+  --color-slate-400: #8f97ab;
+  --color-slate-500: #a3aabd;
+  --color-slate-600: #c3c9d7;
+  --color-slate-700: #d6dae5;
+  --color-slate-800: #e6e9f1;
+  --color-slate-900: #f3f5f9;
+
+  --color-ink: #e8ebf3;
+  --color-page: #0b0d14;
+  --color-surface: #141724;
+  --color-on-ink: #0b0d14;
+  --color-accent-solid: #5b4bd6;
+  --color-ph-solid: #2563eb;
+
+  --color-chart-basic: #b4bccb;
+  --color-chart-allowance: #3ddc84;
+  --color-chart-weekday: #8d84ff;
+  --color-chart-saturday: #ffb04d;
+  --color-chart-sunday: #ff6f95;
+  --color-chart-ph: #6aa6ff;
+  --color-chart-deduction: #ff6b6f;
+  --color-chart-instalment: #8d84ff;
+  --color-chart-track: #2a2f40;
+  --color-chart-label: #a3aabd;
+
+  /* KPI tile tints: dark, keep each hue so the meaning stays recognisable. */
+  --color-tile-blue: #17243f;
+  --color-tile-mint: #112b24;
+  --color-tile-lav: #241f42;
+  --color-tile-peach: #34202a;
+
+  /* Status / categories: text lifted for dark backgrounds, tints darkened. */
+  --color-good: #3ddc84;
+  --color-good-bg: #0f2c20;
+  --color-bad: #ff7b7f;
+  --color-bad-bg: #3a161b;
+  --color-accent: #aaa3ff;
+  --color-accent-bg: #242050;
+  --color-accent-dark: #4a3cc4;
+  --color-ph: #6aa6ff;
+  --color-ph-bg: #14253f;
+  --color-sat: #ffb04d;
+  --color-sat-bg: #3b2a12;
+  --color-sun: #ff7fa3;
+  --color-sun-bg: #3b1a27;
+  --color-blue: #8fb3ff;
+  --color-blue-bg: #172a4c;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-lift: 0 10px 24px rgba(0, 0, 0, 0.45);
+  --shadow-glow-blue: 0 8px 28px -10px rgba(96, 165, 250, 0.45);
+  --shadow-glow-mint: 0 8px 28px -10px rgba(61, 220, 132, 0.4);
+  --shadow-glow-lav: 0 8px 28px -10px rgba(167, 139, 250, 0.45);
+  --shadow-glow-peach: 0 8px 28px -10px rgba(255, 127, 163, 0.4);
+  --shadow-glow-accent: 0 6px 22px -6px rgba(124, 111, 255, 0.6);
+}
+
+/* Page glows: only in dark. Fixed to the viewport so they stay put while scrolling. */
+:root.dark .app-bg {
+  background-image:
+    radial-gradient(60rem 36rem at 10% -12%, rgba(91, 75, 214, 0.22), transparent 62%),
+    radial-gradient(44rem 30rem at 100% 0%, rgba(61, 220, 132, 0.10), transparent 60%),
+    radial-gradient(42rem 30rem at 55% 115%, rgba(255, 111, 149, 0.10), transparent 60%);
+  background-attachment: fixed;
 }
 
 html {

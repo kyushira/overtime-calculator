@@ -12,7 +12,7 @@ const RUNNING_COLORS: Record<string, string> = {
   petrol: '#34c759',
   erp: '#a2845e',
 };
-const INSTALMENT_COLOR = '#5b4bd6';
+const INSTALMENT_COLOR = 'var(--color-chart-instalment)';
 
 const BAND = {
   ok: { bar: 'bg-good', text: 'text-good' },
@@ -22,7 +22,7 @@ const BAND = {
 
 function Tile({ label, value, sub, emphasis = false }: { label: string; value: string; sub?: string; emphasis?: boolean }) {
   return (
-    <div className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-[var(--shadow-card)] sm:p-4">
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-surface px-3 py-2.5 shadow-[var(--shadow-card)] sm:p-4">
       <div className="text-xs text-slate-500">{label}</div>
       <div className={`mt-0.5 truncate text-[15px] font-bold tabular-nums tracking-[-0.01em] sm:text-xl ${emphasis ? 'text-accent' : 'text-slate-900'}`}>
         {value}
@@ -56,7 +56,7 @@ function Donut({ result }: { result: CarResult }) {
   return (
     <div className="flex flex-wrap items-center gap-5">
       <svg viewBox="0 0 42 42" role="img" aria-label="Monthly cost breakdown" className="mx-auto size-40 shrink-0 text-slate-900">
-        <circle cx="21" cy="21" r={R} fill="none" stroke="#f6f6f7" strokeWidth="5" />
+        <circle cx="21" cy="21" r={R} fill="none" className="stroke-slate-100" strokeWidth="5" />
         {arcs.map((a) =>
           a.pct > 0 ? (
             <circle
@@ -65,7 +65,7 @@ function Donut({ result }: { result: CarResult }) {
               cy="21"
               r={R}
               fill="none"
-              stroke={a.color}
+              style={{ stroke: a.color }}
               strokeWidth="5"
               strokeDasharray={`${a.pct} ${100 - a.pct}`}
               strokeDashoffset={a.offset}
@@ -102,12 +102,12 @@ export function CarResults({ result }: { result: CarResult }) {
 
   return (
     <div className="min-w-0 space-y-4">
-      <section className="rounded-xl bg-ink p-5 text-white sm:p-6" aria-live="polite">
-        <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-white/70">Total monthly car cost</div>
+      <section className="rounded-xl bg-ink p-5 text-on-ink sm:p-6" aria-live="polite">
+        <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-on-ink/70">Total monthly car cost</div>
         <div className="mt-1 text-[34px] font-bold leading-tight tracking-[-0.02em] tabular-nums sm:text-[40px]">
           {money(result.totalMonthly)}
         </div>
-        <div className="mt-1.5 text-[13px] text-white/75">
+        <div className="mt-1.5 text-[13px] text-on-ink/75">
           {money(result.instalment)} instalment + {money(result.running)} running costs
         </div>
       </section>
@@ -165,7 +165,7 @@ export function CarResults({ result }: { result: CarResult }) {
         </Card>
       </div>
 
-      <details className="rounded-xl border border-slate-200 bg-white p-4 text-[13px] text-slate-600 shadow-[var(--shadow-card)] sm:p-5">
+      <details className="rounded-xl border border-slate-200 bg-surface p-4 text-[13px] text-slate-600 shadow-[var(--shadow-card)] sm:p-5">
         <summary className="cursor-pointer font-semibold text-accent">Formulas used</summary>
         <ul className="mt-3 list-disc space-y-1.5 pl-5">
           <li><b>MAS loan cap:</b> OMV ≤ S$20,000 → max loan 70% (min 30% down); OMV &gt; S$20,000 or blank → max loan 60% (min 40% down).</li>

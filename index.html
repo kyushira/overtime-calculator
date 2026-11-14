@@ -4,7 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" />
     <title>Salary &amp; OT Calculator</title>
+    <!--
+      Theme before first paint: reads the saved preference ('auto' | 'light' | 'dark')
+      and sets .dark on <html>. Same rules as src/utils/theme.ts; keep them in sync.
+    -->
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var pref = 'auto';
+        try {
+          var saved = localStorage.getItem('otcalc.theme.v1');
+          if (saved === 'light' || saved === 'dark' || saved === 'auto') pref = saved;
+        } catch (e) {
+          /* storage blocked: stay on auto */
+        }
+        var systemDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var dark = pref === 'dark' || (pref === 'auto' && systemDark);
+        root.classList.toggle('dark', dark);
+        root.style.colorScheme = dark ? 'dark' : 'light';
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#0b0d14' : '#ffffff');
+      })();
+    </script>
   </head>
   <body class="bg-slate-100">
     <div id="root"></div>
