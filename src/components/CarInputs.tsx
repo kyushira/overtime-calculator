@@ -1,6 +1,6 @@
 import { RotateCcw, TriangleAlert } from 'lucide-react';
 import { RUNNING_COSTS, type CarForm, type CarResult } from '../utils/car';
-import { money } from '../utils/format';
+import { money, moneyWhole } from '../utils/format';
 import { btnOutline, Card, Field, NumInput, SectionLabel } from './ui';
 
 interface Props {
@@ -45,7 +45,7 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
               <NumInput
                 value={form.price}
                 prefix="S$"
-                placeholder="0"
+                ariaLabel="Car price in S$"
                 error={result.negErrors.price}
                 onChange={(price) => update({ price, downMode: 'pct' })}
               />
@@ -88,13 +88,13 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
               <TriangleAlert size={16} strokeWidth={1.5} aria-hidden className="mt-0.5 shrink-0" />
               <span>
                 Below the MAS minimum of {result.minDownPct}%. Required minimum downpayment:{' '}
-                <b>{money(result.minDown)}</b> (max loan {money(result.maxLoan)}).
+                <b>{money(result.minDown)}</b> (max loan {moneyWhole(result.maxLoan)}).
               </span>
             </div>
           )}
           <div className="flex items-baseline justify-between gap-2 rounded-lg bg-slate-100 px-3 py-2.5 text-sm">
             <span className="text-slate-500">Loan amount</span>
-            <b className="tabular-nums text-slate-900">{money(result.loan)}</b>
+            <b className="tabular-nums text-slate-900">{moneyWhole(result.loan)}</b>
           </div>
 
           <Field label={<>Loan tenure <span className="font-normal text-slate-400">(max 7 years)</span></>} error={result.tenureError}>

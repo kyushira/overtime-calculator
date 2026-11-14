@@ -1,6 +1,6 @@
 import type { CarResult } from '../utils/car';
 import { formatTenure, RUNNING_COSTS } from '../utils/car';
-import { money } from '../utils/format';
+import { money, moneyWhole } from '../utils/format';
 import { Card } from './ui';
 
 /** Segment colours for the monthly breakdown (instalment uses the app accent). */
@@ -73,7 +73,7 @@ function Donut({ result }: { result: CarResult }) {
           ) : null,
         )}
         <text x="21" y="21.5" textAnchor="middle" fontSize="4.6" fontWeight="700" fill="currentColor">
-          {money(Math.round(total)).replace('.00', '')}
+          {moneyWhole(total)}
         </text>
         <text x="21" y="26" textAnchor="middle" fontSize="2.6" fill="currentColor" opacity=".6">
           per month
@@ -115,7 +115,7 @@ export function CarResults({ result }: { result: CarResult }) {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <Tile label="Monthly instalment" value={money(result.instalment)} emphasis />
         <Tile label="Running costs / mth" value={money(result.running)} emphasis />
-        <Tile label="Loan amount" value={money(result.loan)} />
+        <Tile label="Loan amount" value={moneyWhole(result.loan)} />
         <Tile label="Downpayment" value={money(result.down)} sub={`${result.downSharePct}% of price`} />
         <Tile label="Total interest" value={money(result.interest)} />
         <Tile label="Total repayable" value={money(result.repayable)} />

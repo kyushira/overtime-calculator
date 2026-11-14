@@ -1,8 +1,25 @@
-const sgd = new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' });
+/* Money is always shown as S$ (Singapore dollars), e.g. S$1,234.50 or -S$12.00. */
+const amountFmt = new Intl.NumberFormat('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const wholeFmt = new Intl.NumberFormat('en-SG', { maximumFractionDigits: 0 });
 
-export const money = (n: number) => sgd.format(n);
+/** Sign prefix for a formatted magnitude: a value that rounds to zero never shows a minus. */
+function signFor(n: number, body: string): string {
+  return n < 0 && Number(body.replace(/,/g, '')) !== 0 ? '-' : '';
+}
 
-export const signedMoney = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + sgd.format(Math.abs(n));
+/** S$1,234.50 (cents). Negatives: -S$12.00. */
+export const money = (n: number): string => {
+  const body = amountFmt.format(Math.abs(n));
+  return `${signFor(n, body)}S$${body}`;
+};
+
+/** S$90,000 (no cents), for loan principal and similar whole-dollar figures. */
+export const moneyWhole = (n: number): string => {
+  const body = wholeFmt.format(Math.abs(n));
+  return `${signFor(n, body)}S$${body}`;
+};
+
+export const signedMoney = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + money(Math.abs(n));
 
 export const num = (n: number, dp = 2) =>
   n.toLocaleString('en-SG', { minimumFractionDigits: 0, maximumFractionDigits: dp });
