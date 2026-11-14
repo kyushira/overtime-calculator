@@ -70,14 +70,25 @@ export function Field({ label, hint, error, children, className = '' }: {
   );
 }
 
+/* min-h-11: 44px tap target. */
 const inputBase =
-  'w-full rounded-lg border bg-surface px-3 py-2 text-sm text-slate-900 outline-none transition duration-150 ease-out placeholder:text-slate-400 focus:ring-[3px]';
+  'min-h-11 w-full rounded-lg border bg-surface px-3 py-2 text-sm text-slate-900 outline-none transition duration-150 ease-out placeholder:text-slate-400 focus:ring-[3px]';
+
+/** Zero or empty-looking number text ("0", "0.00"); unset strings are not zero. */
+export function isZeroText(v: string): boolean {
+  return v.trim() !== '' && Number(v) === 0;
+}
 
 export function inputClass(error?: string) {
   return `${inputBase} ${error ? 'border-bad/60 focus:ring-bad/15' : 'border-slate-200 hover:border-slate-300 focus:border-slate-400 focus:ring-slate-900/[0.06]'}`;
 }
 
-/** Number input backed by a string so users can type freely; parent validates. */
+/**
+ * Number input backed by a string so users can type freely; parent validates.
+ * A stored "0" that isn't focused shows the grey placeholder instead, so it
+ * doesn't read as a typed value. The stored string is unchanged; focusing
+ * selects it so the first keystroke replaces the 0.
+ */
 export function NumInput({ value, onChange, error, step = 'any', placeholder, suffix, prefix, ariaLabel }: {
   value: string;
   onChange: (v: string) => void;
@@ -88,6 +99,8 @@ export function NumInput({ value, onChange, error, step = 'any', placeholder, su
   prefix?: string;
   ariaLabel?: string;
 }) {
+  const [focused, setFocused] = useState(false);
+  const shown = focused || !isZeroText(value) ? value : '';
   return (
     <div className="relative">
       {prefix && <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-400">{prefix}</span>}
@@ -96,10 +109,15 @@ export function NumInput({ value, onChange, error, step = 'any', placeholder, su
         inputMode="decimal"
         min={0}
         step={step}
-        value={value}
+        value={shown}
         placeholder={placeholder ?? '0'}
         aria-label={ariaLabel}
         aria-invalid={!!error}
+        onFocus={(e) => {
+          setFocused(true);
+          if (isZeroText(value)) e.currentTarget.select();
+        }}
+        onBlur={() => setFocused(false)}
         onChange={(e) => onChange(e.target.value)}
         className={`${inputClass(error)} ${prefix ? 'pl-10' : ''} ${suffix ? 'pr-14' : ''}`}
       />
@@ -131,7 +149,7 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`relative z-10 flex-1 whitespace-nowrap rounded-md px-2 font-medium transition-colors duration-200 ${size === 'sm' ? 'py-1 text-xs' : 'py-1.5 text-sm'} ${
+          className={`relative z-10 flex-1 whitespace-nowrap rounded-md px-2 font-medium transition-colors duration-200 ${size === 'sm' ? 'py-1 text-xs' : 'min-h-11 py-1.5 text-sm'} ${
             value === o.value ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'
           }`}
         >

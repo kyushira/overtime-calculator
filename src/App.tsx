@@ -10,7 +10,9 @@ import { SummaryCards } from './components/SummaryCards';
 import { TargetMode } from './components/TargetMode';
 import { btnOutline, SectionLabel } from './components/ui';
 import { AppearanceCard } from './components/AppearanceCard';
+import { PrivacyToggle } from './components/PrivacyToggle';
 import { ThemeToggle } from './components/ThemeToggle';
+import { useCompactOnScroll } from './hooks/useCompactOnScroll';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { usePayrollForm } from './hooks/usePayrollForm';
 import { type Tab, useTab } from './hooks/useTab';
@@ -18,6 +20,7 @@ import { useTheme } from './hooks/useTheme';
 import type { FormState } from './types/form';
 import type { OtQuantities, PayrollConfig } from './types/payroll';
 import { DEFAULT_CONFIG, DEFAULT_NORMAL_SHIFTS } from './utils/defaults';
+import { formatPeriodLabel } from './utils/format';
 import { migrateConfig, migrateForm } from './utils/migrate';
 
 /** Default payout month: this month if payday hasn't passed, else next month. */
@@ -50,7 +53,7 @@ const TAB_ITEMS: { id: Tab; label: string; icon: LucideIcon; blurb: string }[] =
 ];
 
 const ICON = { size: 18, strokeWidth: 1.5 } as const;
-const NAV_ROW = 44; // px: 40px item + 4px gap, used by the sliding indicator
+const NAV_ROW = 48; // px: 44px item + 4px gap, used by the sliding indicator
 
 function Logo() {
   return (
@@ -70,10 +73,13 @@ export default function App() {
   const [settingsKey, setSettingsKey] = useState(0);
   // One theme state for the whole app: header toggle and Settings share it.
   const theme = useTheme();
+  // Sticky KPI bar collapses to a slim row once the page is scrolled.
+  const compact = useCompactOnScroll();
 
   const update = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
   const calc = usePayrollForm(form, config);
   const { quantities, normalShifts, publicHolidayShifts, fromCalendar, cycle, errors, warnings, result } = calc;
+  const periodLabel = cycle ? formatPeriodLabel(cycle.year, cycle.month) : null;
 
   const tabIdx = TAB_ITEMS.findIndex((t) => t.id === tab);
   const current = TAB_ITEMS[tabIdx];
@@ -134,7 +140,7 @@ export default function App() {
                     aria-selected={active}
                     aria-controls="panel"
                     onClick={() => goTo(t.id)}
-                    className={`flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
+                    className={`flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
                       active ? 'text-slate-900' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
@@ -164,7 +170,10 @@ export default function App() {
               </h1>
               <p className="hidden truncate text-[13px] text-slate-500 sm:block">{current.blurb}</p>
             </div>
-            <ThemeToggle pref={theme.pref} onCycle={theme.cyclePref} className="ml-auto" />
+            <div className="ml-auto flex shrink-0 items-center">
+              <PrivacyToggle hidden={hidePay} onToggle={() => setHidePay((h) => !h)} />
+              <ThemeToggle pref={theme.pref} onCycle={theme.cyclePref} />
+            </div>
           </div>
         </header>
 
@@ -172,8 +181,8 @@ export default function App() {
         {/* The car tab has its own figures, so the OT pay tiles are not shown there. */}
         {tab !== 'car' && (
           <div className="sticky top-0 z-20 border-b border-slate-200 bg-surface/90 backdrop-blur-md">
-            <div className="mx-auto max-w-6xl px-3 py-2 sm:px-6 sm:py-4">
-              <SummaryCards result={result} hidden={hidePay} onToggleHidden={() => setHidePay((h) => !h)} />
+            <div className={`mx-auto max-w-6xl px-3 transition-[padding] duration-200 sm:px-6 ${compact ? 'py-1.5' : 'py-2 sm:py-4'}`}>
+              <SummaryCards result={result} hidden={hidePay} compact={compact} periodLabel={periodLabel} />
             </div>
           </div>
         )}
@@ -196,7 +205,7 @@ export default function App() {
                 />
                 <div className="min-w-0 space-y-4">
                   {cycle && <CycleInfo cycle={cycle} />}
-                  <button type="button" onClick={() => goTo('breakdown')} className={`${btnOutline} w-full py-2.5`}>
+                  <button type="button" onClick={() => goTo('breakdown')} className={`${btnOutline} min-h-11 w-full py-2.5`}>
                     <ReceiptText size={16} strokeWidth={1.5} aria-hidden /> See full breakdown
                   </button>
                 </div>

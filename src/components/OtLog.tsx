@@ -160,7 +160,7 @@ export function OtLog({ cycle, entries, onChange, otHours, totals, shiftAllowanc
     requestAnimationFrame(() => pop(document.querySelector(`[data-date="${iso}"]`)));
   };
 
-  const chip = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition duration-150 ease-out active:scale-[0.96]';
+  const chip = 'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition duration-150 ease-out active:scale-[0.96]';
   const ic = { size: 14, strokeWidth: 1.5, 'aria-hidden': true } as const;
 
   const legend: { cls: string; label: string; mark?: string }[] = [

@@ -11,3 +11,9 @@ export const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
+
+/** Payout period label, e.g. "November 2026". Null when the month/year isn't valid. */
+export function formatPeriodLabel(year: number, month: number): string | null {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+  return `${MONTHS[month - 1]} ${year}`;
+}
