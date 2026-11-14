@@ -11,7 +11,10 @@ export type ResolvedTheme = 'light' | 'dark';
 
 export const THEME_PREFS: readonly ThemePref[] = ['auto', 'light', 'dark'];
 
-/** Page background per resolved theme (used for <meta name="theme-color">). */
+/**
+ * Page background per resolved theme (used for <meta name="theme-color">).
+ * Must equal `--color-page` in src/index.css for that theme (light #ffffff, dark #0b0d14).
+ */
 export const THEME_BG: Record<ResolvedTheme, string> = { light: '#ffffff', dark: '#0b0d14' };
 
 /** Anything other than the three known values (or missing) falls back to auto. */

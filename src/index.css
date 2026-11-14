@@ -18,8 +18,8 @@
   --color-slate-100: #f6f6f7;
   --color-slate-200: #ececee;
   --color-slate-300: #dcdce0;
-  --color-slate-400: #6f7480;
-  --color-slate-500: #6b7280;
+  --color-slate-400: #686d78;
+  --color-slate-500: #666d7a;
   --color-slate-600: #4b5563;
   --color-slate-700: #374151;
   --color-slate-800: #1f2937;
@@ -52,22 +52,23 @@
   --color-tile-lav: #f2f1fc;
   --color-tile-peach: #fdf2f2;
 
-  /* Status / categories */
-  --color-good: #22a861;
+  /* Status / categories. Text tokens are darkened (same hue) so each passes
+     WCAG AA 4.5:1 on its own tint and on white. Backgrounds unchanged. */
+  --color-good: #197e49;
   --color-good-bg: #e7f8ef;
-  --color-bad: #e5484d;
+  --color-bad: #d31e24;
   --color-bad-bg: #fdecec;
   --color-accent: #5b4bd6;
   --color-accent-bg: #eeebfd;
   --color-accent-dark: #3f31b0;
   /* Public holiday worked */
-  --color-ph: #3b82f6;
+  --color-ph: #0b63f3;
   --color-ph-bg: #eef4fd;
-  --color-sat: #c27510;
+  --color-sat: #9d5f0d;
   --color-sat-bg: #fdf3e2;
-  --color-sun: #db2c5a;
+  --color-sun: #ce2350;
   --color-sun-bg: #fdecf1;
-  --color-blue: #3b6fd8;
+  --color-blue: #2d65d5;
   --color-blue-bg: #e8effc;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
