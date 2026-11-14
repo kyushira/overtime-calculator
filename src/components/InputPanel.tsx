@@ -93,7 +93,7 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
           <Field
             label="Normal shifts worked"
             error={errors.normalShifts}
-            hint={`Shift allowance ${money(perShift)} per shift. Weekend and public-holiday shifts are typed separately below, not counted here.`}
+            hint={`Weekday shifts only. Shift allowance ${money(perShift)} per shift; weekend and public-holiday shifts get it automatically.`}
           >
             <NumInput value={form.normalShifts} onChange={(v) => update({ normalShifts: v })} error={errors.normalShifts} step="1" suffix="shifts" ariaLabel="Normal shifts worked" />
           </Field>
@@ -104,13 +104,13 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
             <Field label="Weekday OT" error={errors.weekdayOtHours} hint="Quarter hours OK, e.g. 6.25">
               <NumInput value={form.weekdayOtHours} onChange={(v) => update({ weekdayOtHours: v })} error={errors.weekdayOtHours} step="0.25" suffix="hrs" />
             </Field>
-            <Field label="Saturday shifts" error={errors.saturdayShifts} hint={`Number typed in, not from the calendar. Each shift paid ${config.rules.fullShiftHours} hrs × ${config.rules.saturdayMultiplier}x.`}>
+            <Field label="Saturday shifts" error={errors.saturdayShifts} hint={`Enter manually. Each shift = ${config.rules.fullShiftHours} hrs at ${config.rules.saturdayMultiplier}x.`}>
               <NumInput value={form.saturdayShifts} onChange={(v) => update({ saturdayShifts: v })} error={errors.saturdayShifts} step="1" suffix="shifts" />
             </Field>
-            <Field label="Sunday shifts" error={errors.sundayShifts} hint={`Number typed in, not from the calendar. Rest-day rate ${config.rules.sundayMultiplier}x.`}>
+            <Field label="Sunday shifts" error={errors.sundayShifts} hint={`Enter manually. Rest day, paid at ${config.rules.sundayMultiplier}x per shift.`}>
               <NumInput value={form.sundayShifts} onChange={(v) => update({ sundayShifts: v })} error={errors.sundayShifts} step="1" suffix="shifts" />
             </Field>
-            <Field label="Public holiday shifts" error={errors.publicHolidayShifts} hint={`Number typed in. Paid like Sunday, ${config.rules.sundayMultiplier}x.`}>
+            <Field label="Public holiday shifts" error={errors.publicHolidayShifts} hint={`Enter manually. Paid like Sunday, ${config.rules.sundayMultiplier}x.`}>
               <NumInput value={form.publicHolidayShifts} onChange={(v) => update({ publicHolidayShifts: v })} error={errors.publicHolidayShifts} step="1" suffix="shifts" ariaLabel="Public holiday shifts" />
             </Field>
           </div>
