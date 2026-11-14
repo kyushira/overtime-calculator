@@ -33,6 +33,7 @@ function TileValue({ value, negative, hidden, hero }: { value: number; negative?
   return (
     <div
       className={`grid tabular-nums tracking-[-0.02em] text-slate-900 ${hero ? 'text-[22px] font-extrabold sm:text-2xl lg:text-xl' : 'text-[15px] font-bold sm:text-2xl lg:text-xl'}`}
+      role="img"
       aria-label={hidden ? 'hidden' : `${negative ? 'minus ' : ''}${money(value)}`}
     >
       <span aria-hidden className={`col-start-1 row-start-1 truncate transition-[opacity,filter] duration-200 ease-out ${hidden ? 'opacity-0 blur-sm' : 'opacity-100 blur-0'}`}>
