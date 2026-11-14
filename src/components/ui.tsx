@@ -63,13 +63,17 @@ export function Field({ label, hint, error, aside, children, className = '' }: {
   children: ReactNode;
   className?: string;
 }) {
+  // Only the label text and the control sit inside <label>, so the input's name stays the label.
+  // Hint, error and aside sit outside it; callers link the aside with aria-describedby.
   return (
-    <label className={`block min-w-0 ${className}`}>
-      <span className="mb-1.5 block text-[13px] font-medium text-slate-700">{label}</span>
-      {children}
+    <div className={`block min-w-0 ${className}`}>
+      <label className="block">
+        <span className="mb-1.5 block text-[13px] font-medium text-slate-700">{label}</span>
+        {children}
+      </label>
       {aside}
       {error ? <ErrorText key={error}>{error}</ErrorText> : hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
-    </label>
+    </div>
   );
 }
 
@@ -92,7 +96,7 @@ export function inputClass(error?: string) {
  * to type), so it never looks like it already holds a value. Focusing a stored
  * zero selects it so the first keystroke replaces it.
  */
-export function NumInput({ value, onChange, error, step = 'any', placeholder, suffix, prefix, ariaLabel }: {
+export function NumInput({ value, onChange, error, step = 'any', placeholder, suffix, prefix, ariaLabel, describedBy }: {
   value: string;
   onChange: (v: string) => void;
   error?: string;
@@ -101,6 +105,8 @@ export function NumInput({ value, onChange, error, step = 'any', placeholder, su
   suffix?: string;
   prefix?: string;
   ariaLabel?: string;
+  /** id of a sibling element that describes the input (e.g. a live amount). */
+  describedBy?: string;
 }) {
   return (
     <div className="relative">
@@ -113,6 +119,7 @@ export function NumInput({ value, onChange, error, step = 'any', placeholder, su
         value={value}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        aria-describedby={describedBy}
         aria-invalid={!!error}
         onFocus={(e) => {
           if (isZeroText(value)) e.currentTarget.select();

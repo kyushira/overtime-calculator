@@ -1,5 +1,6 @@
 import { Lock, Plus, TriangleAlert, X } from 'lucide-react';
 import type { FormErrors, FormState } from '../types/form';
+import { useId } from 'react';
 import type { OtQuantities, PayCycle, PayrollConfig, PayResult } from '../types/payroll';
 import { money, MONTHS, num } from '../utils/format';
 import { OtLog } from './OtLog';
@@ -26,18 +27,26 @@ interface Props {
 }
 
 /**
- * Live S$ for one OT / shift field: the same line amount Breakdown shows.
- * Hidden when the field is empty or zero, or when amounts are hidden. Display only.
+ * Live S$ for one OT / shift field: the same line amount Breakdown shows. Display only.
+ * Rendered only when `id` is set (see liveId); the input points at it with aria-describedby.
  */
-function LiveAmount({ value, amount, tone, hidden }: { value: string; amount: number | undefined; tone: string; hidden: boolean }) {
-  if (hidden || !(Number(value) > 0) || !amount) return null;
-  return <span className={`mt-1 block text-right text-xs font-medium tabular-nums ${tone}`}>= {money(amount)}</span>;
+function LiveAmount({ id, amount, tone }: { id?: string; amount: number | undefined; tone: string }) {
+  if (!id || !amount) return null;
+  return <span id={id} className={`mt-1 block text-right text-xs font-medium tabular-nums ${tone}`}>= {money(amount)}</span>;
 }
 
 export function InputPanel({ form, update, errors, warnings, cycle, quantities, normalShifts, publicHolidayShifts, fromCalendar, config, result, hidden }: Props) {
   const perShift = config.rules.shiftAllowancePerShift;
   const lineAmount = (key: string) => result.earnings.find((l) => l.key === key)?.amount;
   const { fullShiftHours, saturdayMultiplier, sundayMultiplier } = config.rules;
+  // Live S$ id per OT / shift field: set only when the amount is shown (non-zero entry, not hidden).
+  const liveBase = useId();
+  const liveId = (key: string, value: string, amount: number | undefined) =>
+    !hidden && Number(value) > 0 && amount ? `${liveBase}-${key}` : undefined;
+  const liveWeekday = liveId('weekday', form.weekdayOtHours, lineAmount('ot-weekday'));
+  const liveSaturday = liveId('saturday', form.saturdayShifts, lineAmount('ot-saturday'));
+  const liveSunday = liveId('sunday', form.sundayShifts, lineAmount('ot-sunday'));
+  const livePh = liveId('ph', form.publicHolidayShifts, lineAmount('ot-ph'));
 
   // Leaving "Pick dates" carries the calendar totals into the typed fields
   // (if any days are marked). Going the other way can't infer dates, so the
@@ -122,33 +131,33 @@ export function InputPanel({ form, update, errors, warnings, cycle, quantities, 
               label="Weekday OT"
               error={errors.weekdayOtHours}
               hint="Quarter hours OK, e.g. 6.25"
-              aside={<LiveAmount value={form.weekdayOtHours} amount={lineAmount('ot-weekday')} tone="text-accent" hidden={hidden} />}
+              aside={<LiveAmount id={liveWeekday} amount={lineAmount('ot-weekday')} tone="text-accent" />}
             >
-              <NumInput value={form.weekdayOtHours} onChange={(v) => update({ weekdayOtHours: v })} error={errors.weekdayOtHours} step="0.25" suffix="hrs" ariaLabel="Weekday OT hours" />
+              <NumInput value={form.weekdayOtHours} onChange={(v) => update({ weekdayOtHours: v })} error={errors.weekdayOtHours} step="0.25" suffix="hrs" ariaLabel="Weekday OT hours" describedBy={liveWeekday} />
             </Field>
             <Field
               label="Saturday shifts"
               error={errors.saturdayShifts}
               hint={`Number of Saturday shifts (${num(fullShiftHours)} hrs each, ${saturdayMultiplier}x). ${money(perShift)} allowance added.`}
-              aside={<LiveAmount value={form.saturdayShifts} amount={lineAmount('ot-saturday')} tone="text-sat" hidden={hidden} />}
+              aside={<LiveAmount id={liveSaturday} amount={lineAmount('ot-saturday')} tone="text-sat" />}
             >
-              <NumInput value={form.saturdayShifts} onChange={(v) => update({ saturdayShifts: v })} error={errors.saturdayShifts} step="1" suffix="shifts" ariaLabel="Saturday shifts" />
+              <NumInput value={form.saturdayShifts} onChange={(v) => update({ saturdayShifts: v })} error={errors.saturdayShifts} step="1" suffix="shifts" ariaLabel="Saturday shifts" describedBy={liveSaturday} />
             </Field>
             <Field
               label="Sunday shifts"
               error={errors.sundayShifts}
               hint={`Number of Sunday shifts (${sundayMultiplier}x). ${money(perShift)} allowance added.`}
-              aside={<LiveAmount value={form.sundayShifts} amount={lineAmount('ot-sunday')} tone="text-sun" hidden={hidden} />}
+              aside={<LiveAmount id={liveSunday} amount={lineAmount('ot-sunday')} tone="text-sun" />}
             >
-              <NumInput value={form.sundayShifts} onChange={(v) => update({ sundayShifts: v })} error={errors.sundayShifts} step="1" suffix="shifts" ariaLabel="Sunday shifts" />
+              <NumInput value={form.sundayShifts} onChange={(v) => update({ sundayShifts: v })} error={errors.sundayShifts} step="1" suffix="shifts" ariaLabel="Sunday shifts" describedBy={liveSunday} />
             </Field>
             <Field
               label="Public holiday shifts"
               error={errors.publicHolidayShifts}
               hint={`Number of PH shifts (${sundayMultiplier}x, same as Sunday). ${money(perShift)} allowance added.`}
-              aside={<LiveAmount value={form.publicHolidayShifts} amount={lineAmount('ot-ph')} tone="text-ph" hidden={hidden} />}
+              aside={<LiveAmount id={livePh} amount={lineAmount('ot-ph')} tone="text-ph" />}
             >
-              <NumInput value={form.publicHolidayShifts} onChange={(v) => update({ publicHolidayShifts: v })} error={errors.publicHolidayShifts} step="1" suffix="shifts" ariaLabel="Public holiday shifts" />
+              <NumInput value={form.publicHolidayShifts} onChange={(v) => update({ publicHolidayShifts: v })} error={errors.publicHolidayShifts} step="1" suffix="shifts" ariaLabel="Public holiday shifts" describedBy={livePh} />
             </Field>
           </div>
         ) : (
