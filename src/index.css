@@ -88,7 +88,6 @@
   --shadow-glow-lav: none;
   --shadow-glow-peach: none;
   --shadow-glow-accent: none;
-  --shadow-bar-glow: none;
 
   --ease-out-soft: cubic-bezier(0.2, 0.7, 0.3, 1);
 }
@@ -171,8 +170,6 @@
   --shadow-glow-mint: 0 0 0 1px rgba(61, 220, 132, 0.45), 0 10px 36px -4px rgba(61, 220, 132, 0.5);
   /* Primary buttons and the active tab pill. */
   --shadow-glow-accent: 0 6px 22px -6px rgba(124, 111, 255, 0.6);
-  /* Months chart bars. */
-  --shadow-bar-glow: 0 0 12px -2px rgba(170, 163, 255, 0.4);
 }
 
 /* Page glows: only in dark. Fixed to the viewport so they stay put while scrolling. */

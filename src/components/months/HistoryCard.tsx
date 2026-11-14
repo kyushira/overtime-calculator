@@ -58,8 +58,13 @@ export function HistoryCard({ months, fmt, onOpen, onDelete }: Props) {
             >
               {points.map((p, i) => (
                 <div key={p.id} aria-hidden className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
+                  {/* Dark only: a soft glow in each bar's own colour (40% alpha). */}
                   <div
-                    className={`w-3/5 rounded-t-md shadow-[var(--shadow-bar-glow)] transition-[height] duration-500 ease-out ${i === points.length - 1 ? 'bg-accent' : 'bg-ink/80'}`}
+                    className={`w-3/5 rounded-t-md transition-[height] duration-500 ease-out ${
+                      i === points.length - 1
+                        ? 'bg-accent dark:drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-accent)_40%,transparent)]'
+                        : 'bg-ink/80 dark:drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-ink)_40%,transparent)]'
+                    }`}
                     style={{ height: `${Math.max(4, top > 0 ? (p.net / top) * 100 : 0)}%` }}
                   />
                   <span className="w-full truncate text-center text-[11px] text-slate-500">{p.label}</span>
