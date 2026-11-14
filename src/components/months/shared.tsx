@@ -17,7 +17,7 @@ export function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-xl bg-slate-100/70 p-3">
       <div className="truncate text-[11px] font-medium text-slate-500">{label}</div>
-      <div className="mt-0.5 truncate text-sm font-bold tabular-nums tracking-[-0.01em] text-slate-900 sm:text-base">{value}</div>
+      <div className="mt-0.5 text-sm font-bold tabular-nums tracking-[-0.01em] text-slate-900 sm:text-base">{value}</div>
     </div>
   );
 }

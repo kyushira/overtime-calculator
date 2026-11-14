@@ -70,3 +70,44 @@ describe('saved-settings migration', () => {
     expect(migrateForm({ inputMode: 'weird' }, initialForm).inputMode).toBe('totals');
   });
 });
+
+describe('imported config hardening', () => {
+  const payInput = (c: ReturnType<typeof migrateConfig>) => ({
+    normalShifts: 22, weekdayOtHours: 4, saturdayShifts: 1, sundayShifts: 0, publicHolidayShifts: 0,
+    deductions: c.defaultDeductions,
+  });
+
+  it('keeps the default cpf values when the imported ones have the wrong type or are not finite', () => {
+    expect(migrateConfig({ cpf: { employeeRate: '0.2', owCeiling: NaN } }).cpf).toEqual(DEFAULT_CONFIG.cpf);
+  });
+
+  it('keeps a string employeeRate out of the calculation so net pay stays finite', () => {
+    const c = migrateConfig({ cpf: { employeeRate: '0.2' } });
+    expect(c.cpf.employeeRate).toBe(DEFAULT_CONFIG.cpf.employeeRate);
+    expect(Number.isFinite(calculatePay(payInput(c), c).net)).toBe(true);
+  });
+
+  it('drops default deductions with a string amount, so net pay stays finite', () => {
+    const c = migrateConfig({ defaultDeductions: [{ id: 'mbf', label: 'MBF', amount: '5' }] });
+    expect(Number.isFinite(calculatePay(payInput(c), c).net)).toBe(true);
+  });
+
+  it('keeps only valid deductions and copies only known keys', () => {
+    const raw = [
+      { id: 'x', label: 'X', amount: 2, extra: 'y' },
+      { id: 'mbf', label: 'MBF', amount: '5' },
+      null,
+      { id: 'neg', label: 'N', amount: -1 },
+      { id: 1, label: 'Num id', amount: 3 },
+    ];
+    expect(migrateConfig({ defaultDeductions: raw }).defaultDeductions).toEqual([{ id: 'x', label: 'X', amount: 2 }]);
+  });
+
+  it('falls back to default deductions when a non-empty list has no valid item', () => {
+    expect(migrateConfig({ defaultDeductions: [{ id: 1, label: 'x', amount: 2 }] }).defaultDeductions).toEqual(DEFAULT_CONFIG.defaultDeductions);
+  });
+
+  it('keeps an intentionally empty deductions list empty', () => {
+    expect(migrateConfig({ defaultDeductions: [] }).defaultDeductions).toEqual([]);
+  });
+});

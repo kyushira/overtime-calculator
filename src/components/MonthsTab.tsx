@@ -103,7 +103,7 @@ function ThisMonthCard({ form, calc, store, setStore, fmt }: {
           onClick={save}
           disabled={!!blocked}
           aria-describedby="months-save-hint"
-          className={`${btnPrimary} w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-50`}
+          className={`${btnPrimary} min-h-11 w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <Save size={16} strokeWidth={1.5} aria-hidden /> {label ? `Save ${label}` : 'Save month'}
         </button>

@@ -4,6 +4,7 @@ import type { OtQuantities } from '../types/payroll';
 import { DEFAULT_CONFIG } from './defaults';
 import {
   EMPTY_STORE,
+  MAX_BACKUP_BYTES,
   MONTHS_STORAGE_KEY,
   MONTHS_VERSION,
   backupFileName,
@@ -12,6 +13,7 @@ import {
   deleteMonth,
   diffVsLast,
   exportBackup,
+  isBackupTooLarge,
   latestMonth,
   mergeStores,
   migrateMonthsStore,
@@ -20,6 +22,7 @@ import {
   nextMonthAfter,
   parseBackup,
   planToForm,
+  sanitizeCustomDeductions,
   sortNewestFirst,
   stats,
   trend,
@@ -386,5 +389,68 @@ describe('mergeStores', () => {
     const incomingPlan = defaultPlan([snap(2026, 3)], baseForm, NOW);
     const merged = mergeStores({ ...EMPTY_STORE, plan: null }, { ...EMPTY_STORE, plan: incomingPlan });
     expect(merged.plan).toEqual(incomingPlan);
+  });
+});
+
+describe('sanitizeCustomDeductions', () => {
+  it('keeps valid drafts unchanged', () => {
+    const valid = [{ id: 'a', label: 'Gym', amount: '12.5' }];
+    expect(sanitizeCustomDeductions(valid)).toEqual(valid);
+  });
+
+  it('drops items that are not plain objects', () => {
+    const raw = [null, 'x', 4, [1], { id: 'b', label: 'Gym', amount: '3' }];
+    expect(sanitizeCustomDeductions(raw)).toEqual([{ id: 'b', label: 'Gym', amount: '3' }]);
+  });
+
+  it('uses a stable imported-<index> id when id is missing or not a string', () => {
+    const raw = [{ label: 'A', amount: '1' }, { id: 7, label: 'B', amount: '2' }];
+    expect(sanitizeCustomDeductions(raw).map((d) => d.id)).toEqual(['imported-0', 'imported-1']);
+  });
+
+  it('coerces label and amount: finite numbers to strings, anything else to empty', () => {
+    const raw = [
+      { id: 'a', label: 5, amount: 12.5 },
+      { id: 'b', label: null, amount: NaN },
+      { id: 'c', label: 'x', amount: {} },
+    ];
+    expect(sanitizeCustomDeductions(raw)).toEqual([
+      { id: 'a', label: '5', amount: '12.5' },
+      { id: 'b', label: '', amount: '' },
+      { id: 'c', label: 'x', amount: '' },
+    ]);
+  });
+
+  it('returns an empty list when the value is not an array', () => {
+    expect(sanitizeCustomDeductions(undefined)).toEqual([]);
+    expect(sanitizeCustomDeductions({ id: 'a' })).toEqual([]);
+  });
+});
+
+describe('saved form reading (no crash on bad saved data)', () => {
+  it('sanitizes custom deductions and migrates entries inside a saved month', () => {
+    const good = snap(2026, 3);
+    const raw = {
+      ...good,
+      form: {
+        ...good.form,
+        customDeductions: [null, { id: 9, label: 4, amount: 3 }, { id: 'ok', label: 'Gym', amount: '20' }],
+        entries: [null, { date: 5 }, { id: 'a', date: '2026-03-02', status: 'ot', hours: 1.25 }],
+      },
+    };
+    const [m] = migrateMonthsStore({ version: 1, months: [raw], plan: null }).months;
+    expect(m.form.customDeductions).toEqual([
+      { id: 'imported-1', label: '4', amount: '3' },
+      { id: 'ok', label: 'Gym', amount: '20' },
+    ]);
+    expect(m.form.entries).toEqual([{ id: 'a', date: '2026-03-02', status: 'otLong' }]);
+  });
+});
+
+describe('backup size cap', () => {
+  it('allows files up to 2 MB and rejects anything bigger', () => {
+    expect(MAX_BACKUP_BYTES).toBe(2 * 1024 * 1024);
+    expect(isBackupTooLarge(MAX_BACKUP_BYTES)).toBe(false);
+    expect(isBackupTooLarge(MAX_BACKUP_BYTES + 1)).toBe(true);
   });
 });

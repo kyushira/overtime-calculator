@@ -5,6 +5,7 @@ import type { FormState } from '../../types/form';
 import type { PayrollConfig } from '../../types/payroll';
 import { defaultPlan, diffVsLast, monthLabel, planToForm, type MonthsStore, type PlanState } from '../../utils/months';
 import { round2 } from '../../utils/payroll';
+import { validateMonthYear } from '../../utils/validation';
 import { Badge, btnGhost, btnPrimary, Card, Field, NumInput, SectionLabel } from '../ui';
 import { Fmt, MonthPicker } from './shared';
 
@@ -27,6 +28,9 @@ export function PlanCard({ store, setStore, form, config, fmt, onSetTarget }: Pr
   const cmp = diffVsLast(result.net, store.months);
   const otherTotal = result.otherDeductions.reduce((s, d) => s + d.amount, 0);
   const hasErrors = Object.keys(errors).length > 0;
+  const planned = validateMonthYear(plan.year, plan.month);
+  const plannedNotAfterLatest =
+    cmp.last !== null && !planned.error && planned.year * 12 + planned.month <= cmp.last.year * 12 + cmp.last.month;
 
   const patch = (p: Partial<PlanState>) =>
     setStore((s) => ({ ...s, plan: { ...(s.plan ?? defaultPlan(s.months, form)), ...p } }));
@@ -96,6 +100,11 @@ export function PlanCard({ store, setStore, form, config, fmt, onSetTarget }: Pr
               <span className="text-xs text-slate-500">Save a month to compare</span>
             )}
           </div>
+          {cmp.last && plannedNotAfterLatest && (
+            <p className="mt-2 rounded-lg bg-sat-bg p-2 text-xs text-sat">
+              This month is already saved or earlier — the comparison is against {monthLabel(cmp.last.year, cmp.last.month)}.
+            </p>
+          )}
           <p className="mt-2 text-xs text-slate-500">Plan ignores one-off custom deductions.</p>
         </div>
 
@@ -104,7 +113,8 @@ export function PlanCard({ store, setStore, form, config, fmt, onSetTarget }: Pr
             type="button"
             disabled={hasErrors}
             onClick={() => onSetTarget(round2(result.net))}
-            className={`${btnPrimary} disabled:cursor-not-allowed disabled:opacity-50`}
+            aria-describedby={hasErrors ? 'plan-target-hint' : undefined}
+            className={`${btnPrimary} min-h-11 disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <Target size={16} strokeWidth={1.5} aria-hidden /> Set as Target goal
           </button>
@@ -112,11 +122,16 @@ export function PlanCard({ store, setStore, form, config, fmt, onSetTarget }: Pr
             type="button"
             disabled={store.plan === null}
             onClick={() => setStore((s) => ({ ...s, plan: null }))}
-            className={`${btnGhost} disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`${btnGhost} min-h-11 disabled:cursor-not-allowed disabled:opacity-50`}
           >
             <RotateCcw size={16} strokeWidth={1.5} aria-hidden /> Reset plan
           </button>
         </div>
+        {hasErrors && (
+          <p id="plan-target-hint" className="text-xs text-slate-500">
+            Fix the plan inputs above first.
+          </p>
+        )}
       </div>
     </Card>
   );

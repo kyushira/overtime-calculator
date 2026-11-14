@@ -1,5 +1,6 @@
-import type { FormState } from '../types/form';
+import type { CustomDeductionDraft, FormState } from '../types/form';
 import type { OtQuantities, PayResult } from '../types/payroll';
+import { migrateEntries } from './dayLog';
 import { MONTHS } from './format';
 import { round2 } from './payroll';
 
@@ -67,6 +68,19 @@ const YEAR_MAX = 2100;
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/** Custom deductions as clean drafts: non-objects dropped, label and amount always strings. */
+export function sanitizeCustomDeductions(raw: unknown): CustomDeductionDraft[] {
+  if (!Array.isArray(raw)) return [];
+  const text = (v: unknown): string => (typeof v === 'string' ? v : isNum(v) ? String(v) : '');
+  const out: CustomDeductionDraft[] = [];
+  raw.forEach((item, i) => {
+    if (!isObj(item)) return;
+    const id = typeof item.id === 'string' && item.id ? item.id : `imported-${i}`;
+    out.push({ id, label: text(item.label), amount: text(item.amount) });
+  });
+  return out;
+}
 
 function validYm(year: number, month: number): boolean {
   return Number.isInteger(year) && year >= YEAR_MIN && year <= YEAR_MAX && Number.isInteger(month) && month >= 1 && month <= 12;
@@ -244,8 +258,8 @@ function readForm(raw: Obj): FormState {
     if (typeof v === 'string') form[k] = v;
   }
   form.inputMode = raw.inputMode === 'log' || raw.inputMode === 'totals' ? raw.inputMode : 'totals';
-  form.entries = Array.isArray(raw.entries) ? (raw.entries as FormState['entries']) : [];
-  form.customDeductions = Array.isArray(raw.customDeductions) ? (raw.customDeductions as FormState['customDeductions']) : [];
+  form.entries = migrateEntries(raw.entries);
+  form.customDeductions = sanitizeCustomDeductions(raw.customDeductions);
   return form;
 }
 
@@ -348,6 +362,13 @@ export function exportBackup(store: MonthsStore, config: unknown, now: Date = ne
     null,
     2,
   );
+}
+
+/** Import files above this size are refused before they are read. */
+export const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
+
+export function isBackupTooLarge(bytes: number): boolean {
+  return bytes > MAX_BACKUP_BYTES;
 }
 
 export function backupFileName(now: Date = new Date()): string {

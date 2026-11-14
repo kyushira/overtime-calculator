@@ -35,7 +35,7 @@ export function HistoryCard({ months, fmt, onOpen, onDelete }: Props) {
 
   return (
     <Card title="History" subtitle={`${s.count} saved · newest first`} index={1} className={CARD_POS}>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
         <Stat label="Months saved" value={String(s.count)} />
         <Stat label="Total net" value={fmt(s.totalNet)} />
         <Stat label="Average net" value={fmt(s.averageNet)} />

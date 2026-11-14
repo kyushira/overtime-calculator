@@ -1,7 +1,7 @@
 import { Download, Upload } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import type { PayrollConfig } from '../../types/payroll';
-import { backupFileName, exportBackup, mergeStores, parseBackup, type MonthsStore } from '../../utils/months';
+import { backupFileName, exportBackup, isBackupTooLarge, mergeStores, parseBackup, type MonthsStore } from '../../utils/months';
 import { btnOutline, Card } from '../ui';
 
 interface Props {
@@ -35,6 +35,11 @@ export function BackupCard({ store, setStore, config, onImportConfig }: Props) {
     const input = e.target;
     const file = input.files?.[0];
     if (!file) return;
+    if (isBackupTooLarge(file.size)) {
+      input.value = '';
+      setNotice({ tone: 'bad', text: 'Backup file is too large (max 2 MB).' });
+      return;
+    }
     let text: string;
     try {
       text = await file.text();
