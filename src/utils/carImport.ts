@@ -25,7 +25,12 @@ export interface ImportDraft {
   mileage?: number;
 }
 
-/** Only the fields the calculator actually uses are written to the form; others stay read-only info. */
+/**
+ * Only the fields the calculator actually uses are written to the form; others stay read-only info.
+ * A listing without a price leaves the price alone (the import card says so). A listing without an
+ * OMV clears the OMV: keeping the previous car's OMV would silently pick the wrong MAS cap. Blank
+ * means the stricter 40% minimum, which the form already explains.
+ */
 export function importPatch(fields: ListingFields): Partial<CarForm> {
   const patch: Partial<CarForm> = {};
   if (fields.price !== undefined) {
@@ -33,7 +38,7 @@ export function importPatch(fields: ListingFields): Partial<CarForm> {
     // Same rule as typing a price: keep the percentage, so the S$ downpayment moves with the price.
     patch.downMode = 'pct';
   }
-  if (fields.omv !== undefined) patch.omv = String(fields.omv);
+  patch.omv = fields.omv === undefined ? '' : String(fields.omv);
   return patch;
 }
 

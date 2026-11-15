@@ -167,11 +167,18 @@ export function SgcarmartImport({ onImported }: Props) {
                 ))}
               </ul>
             )}
-            {formMissing.map((m) => (
-              <p key={m} className="rounded-lg border border-sat/20 bg-sat-bg px-3 py-2 text-sat">
-                {missingMessage(m)}
-              </p>
-            ))}
+            {formMissing.map((m) =>
+              m === 'price' ? (
+                // The form keeps its price on a miss, so this must be seen, not just read.
+                <p key={m} className="rounded-lg border border-sat bg-sat-bg px-3 py-2.5 text-[14px] font-semibold text-sat">
+                  {missingMessage(m)}.
+                </p>
+              ) : (
+                <p key={m} className="rounded-lg border border-sat/20 bg-sat-bg px-3 py-2 text-sat">
+                  {missingMessage(m)}. OMV is cleared, so the 40% minimum applies until you enter it.
+                </p>
+              ),
+            )}
             {otherMissing.length > 0 && (
               <p className="text-xs text-slate-500">Not on the listing: {otherMissing.map(fieldLabel).join(', ')}.</p>
             )}

@@ -195,7 +195,7 @@ export function CarResults({ result }: { result: CarResult }) {
       </div>
 
       <details className="rounded-xl border border-slate-200 bg-surface p-4 text-[13px] text-slate-600 shadow-[var(--shadow-card)] sm:p-5">
-        <summary className="cursor-pointer font-semibold text-accent">Formulas used</summary>
+        <summary className="min-h-11 cursor-pointer py-2.5 font-semibold text-accent">Formulas used</summary>
         <ul className="mt-3 list-disc space-y-1.5 pl-5">
           <li><b>MAS loan cap:</b> OMV ≤ S$20,000 → max loan 70% (min 30% down); OMV &gt; S$20,000 or blank → max loan 60% (min 40% down).</li>
           <li><b>Downpayment:</b> <code>S$ = Price × % ÷ 100</code>, <code>% = S$ ÷ Price × 100</code>; changing price keeps the %.</li>

@@ -14,15 +14,24 @@ describe('importPatch (listing fields -> form patch)', () => {
     expect(importPatch({ price: 47800, omv: 33419 })).toEqual({ price: '47800', omv: '33419', downMode: 'pct' });
   });
 
-  it('leaves out fields the listing did not give, so the form keeps its old value', () => {
+  it('keeps the form price when the listing gave none', () => {
     expect(importPatch({ omv: 20000 })).toEqual({ omv: '20000' });
-    expect(importPatch({ price: 0 })).toEqual({ price: '0', downMode: 'pct' });
-    expect(importPatch({})).toEqual({});
+    expect(importPatch({})).toEqual({ omv: '' });
+    expect(importPatch({ price: 0 })).toEqual({ price: '0', downMode: 'pct', omv: '' });
+  });
+
+  it('clears a stale OMV when the listing has none (previous car must not carry over)', () => {
+    // Previous car had OMV 33,419 (above the S$20k cap); the new listing has price only.
+    const previous = { omv: '33419' };
+    const patch = importPatch({ price: 65000 });
+    expect({ ...previous, ...patch }).toEqual({ omv: '', price: '65000', downMode: 'pct' });
   });
 
   it('never touches non-form fields (ARF, COE, year, mileage, name)', () => {
     const patch = importPatch({ name: 'Honda Vezel', arf: 1, coe: 2, year: 2018, mileage: 3 });
-    expect(Object.keys(patch)).toEqual([]);
+    // Only OMV is ever written here (cleared, because the listing gave none); nothing else leaks in.
+    expect(Object.keys(patch)).toEqual(['omv']);
+    expect(patch.omv).toBe('');
   });
 });
 

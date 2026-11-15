@@ -51,7 +51,13 @@ export function CarCompare({ cars, form }: Props) {
   ];
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
+    // Focusable so keyboard users can scroll the table sideways (axe: scrollable-region-focusable).
+    <div
+      role="region"
+      aria-label="Saved cars comparison"
+      tabIndex={0}
+      className="overflow-x-auto rounded-lg border border-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-focus-ring)"
+    >
       <table className="w-full min-w-[30rem] border-collapse text-left text-[13px] tabular-nums">
         <caption className="sr-only">
           Side-by-side comparison of the selected saved cars at the current downpayment and tenure

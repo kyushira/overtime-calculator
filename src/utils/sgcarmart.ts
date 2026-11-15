@@ -213,27 +213,61 @@ export function parseListingHtml(html: unknown): ListingParseResult {
 
 type TextKey = 'name' | 'price' | 'omv' | 'arf' | 'coe' | 'mileage' | 'year' | 'regDate';
 
-// Label patterns are anchored and word-bounded so "COE till 07/2030" in a model name
-// is not taken for the COE label (its value fails the amount check anyway).
-const TEXT_LABELS: Array<{ key: TextKey; re: RegExp }> = [
-  { key: 'price', re: /^price\b/i },
-  { key: 'omv', re: /^omv\b/i },
-  { key: 'arf', re: /^arf\b/i },
-  { key: 'coe', re: /^coe\b/i },
-  { key: 'mileage', re: /^mileage\b/i },
-  { key: 'year', re: /^(?:manufactured|year)\b/i },
-  { key: 'regDate', re: /^reg(?:istration)?\s*date\b/i },
-  { key: 'name', re: /^(?:name|title|model)\s*:/i },
+// A line that starts with a name label: "Name: …", "Title: …" or "Model: …".
+const NAME_LABEL = /^(?:name|title|model)\s*:/i;
+
+// Labels read anywhere in a line, followed by an optional ':' and the value. Word-bounded, so
+// "Coeur" or "pricelist" is not a label. Each pattern is literal text plus at most one whitespace
+// run, so scanning stays linear on hostile input.
+const INLINE_LABELS: ReadonlyArray<{ key: Exclude<TextKey, 'name'>; re: RegExp }> = [
+  { key: 'price', re: /\bprice\b/gi },
+  { key: 'omv', re: /\bomv\b/gi },
+  { key: 'arf', re: /\barf\b/gi },
+  { key: 'coe', re: /\bcoe\b/gi },
+  { key: 'mileage', re: /\bmileage\b/gi },
+  { key: 'year', re: /\b(?:manufactured|year)\b/gi },
+  { key: 'regDate', re: /\breg(?:istration)?\s*date\b/gi },
 ];
+
+/** Characters read after a money or year label at most. Longer than any accepted amount. */
+const VALUE_WINDOW = 40;
 
 const MONEY_KEYS: ReadonlySet<TextKey> = new Set(['price', 'omv', 'arf', 'coe', 'mileage']);
 
-function matchLabel(line: string): { key: TextKey; len: number } | undefined {
-  for (const { key, re } of TEXT_LABELS) {
-    const m = re.exec(line);
-    if (m) return { key, len: m[0].length };
+interface LabelHit {
+  key: TextKey;
+  index: number;
+  end: number;
+}
+
+/** Every label in a line, left to right. A name label counts only at the start of the line. */
+function labelHits(line: string): LabelHit[] {
+  const hits: LabelHit[] = [];
+  const name = NAME_LABEL.exec(line);
+  if (name) hits.push({ key: 'name', index: 0, end: name[0].length });
+  for (const { key, re } of INLINE_LABELS) {
+    for (const m of line.matchAll(re)) {
+      const index = m.index ?? 0;
+      hits.push({ key, index, end: index + m[0].length });
+    }
   }
-  return undefined;
+  return hits.sort((a, b) => a.index - b.index);
+}
+
+/**
+ * The text after a label, up to the next label or the end of the line. Trailing separators before
+ * the next label are dropped, so "Price $65,000, OMV $17,984" reads $65,000.
+ */
+function valueAfter(line: string, hit: LabelHit, next: LabelHit | undefined): string {
+  const stop = next ? next.index : line.length;
+  let seg = line.slice(hit.end, stop).replace(/^[\s:\-–]+/, '');
+  seg = seg.slice(0, hit.key === 'name' ? MAX_NAME_LENGTH * 2 : VALUE_WINDOW);
+  if (next) {
+    let end = seg.length;
+    while (end > 0 && /[\s,;|·•]/.test(seg[end - 1])) end--;
+    seg = seg.slice(0, end);
+  }
+  return seg.trim();
 }
 
 function valueAccepted(key: TextKey, value: string): boolean {
@@ -243,29 +277,46 @@ function valueAccepted(key: TextKey, value: string): boolean {
 }
 
 /**
- * Parses listing details pasted as text. Accepts "Label: value", "Label value",
- * and a label on one line with its value on the next. Never throws.
+ * Parses listing details pasted as text. Accepts "Label: value", "Label value", labels anywhere in a
+ * line ("Price $65,000 OMV $17,984 ARF $7,984 COE $49,822"), and a label whose value is on the next
+ * line. Never throws.
  */
 export function parseListingText(text: unknown): ListingParseResult {
   try {
     if (typeof text !== 'string') return assemble({});
     const lines = text.split(/\r?\n/).map((l) => l.trim());
-    const labelled = lines.map((l) => matchLabel(l));
-    const raw: Partial<Record<TextKey, string>> = {};
+    const hitsByLine = lines.map((l) => labelHits(l));
 
-    for (let i = 0; i < lines.length; i++) {
-      const hit = labelled[i];
-      if (!hit) continue;
-      let value = lines[i].slice(hit.len).replace(/^[\s:\-–]+/, '').trim();
-      if (value === '') {
-        const next = lines.slice(i + 1).find((l) => l !== '');
-        value = next ?? '';
-      }
-      if (raw[hit.key] === undefined && valueAccepted(hit.key, value)) raw[hit.key] = value;
+    // Index of the first non-blank line after each line: a label can take its value from there.
+    const nextNonBlank: number[] = new Array<number>(lines.length);
+    let following = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      nextNonBlank[i] = following;
+      if (lines[i] !== '') following = i;
     }
 
-    // Name without a label: first non-label line that contains a letter.
-    const nameFallback = lines.find((l, i) => l !== '' && !labelled[i] && /[A-Za-z]/.test(l));
+    const raw: Partial<Record<TextKey, string>> = {};
+    // Lines that gave an accepted value. They are labelled, so they are never taken as the name.
+    const usedLines = new Set<number>();
+    for (let i = 0; i < lines.length; i++) {
+      const hits = hitsByLine[i];
+      for (let h = 0; h < hits.length; h++) {
+        const hit = hits[h];
+        let value = valueAfter(lines[i], hit, hits[h + 1]);
+        if (value === '' && h === hits.length - 1 && nextNonBlank[i] !== -1) {
+          value = lines[nextNonBlank[i]];
+        }
+        if (raw[hit.key] === undefined && valueAccepted(hit.key, value)) {
+          raw[hit.key] = value;
+          usedLines.add(i);
+        }
+      }
+    }
+
+    // Name without a label: first line with a letter that carries no label.
+    const nameFallback = lines.find(
+      (l, i) => l !== '' && !usedLines.has(i) && !hitsByLine[i].some((h) => h.index === 0) && /[A-Za-z]/.test(l),
+    );
     const name = raw.name ?? nameFallback;
 
     return assemble({

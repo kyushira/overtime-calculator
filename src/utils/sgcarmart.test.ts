@@ -244,3 +244,66 @@ describe('parseListingText (paste fallback)', () => {
     expect(parseListingText('   \n\n  ').missing).toHaveLength(7);
   });
 });
+
+describe('parseListingText (labels inline in one line)', () => {
+  it('reads all four figures from the one-line paste (exact string)', () => {
+    const r = parseListingText('Price $65,000 OMV $17,984 ARF $7,984 COE $49,822');
+    expect(r.price).toBe(65000);
+    expect(r.omv).toBe(17984);
+    expect(r.arf).toBe(7984);
+    expect(r.coe).toBe(49822);
+    expect(r.missing).toEqual(['name', 'year', 'mileage']);
+  });
+
+  it('reads the Audi one-liner', () => {
+    const r = parseListingText('Price $47,800 OMV $33,419 ARF $38,787 COE $33,900');
+    expect([r.price, r.omv, r.arf, r.coe]).toEqual([47800, 33419, 38787, 33900]);
+  });
+
+  it('accepts colons, S$ prefixes and separators between inline pairs', () => {
+    const r = parseListingText('Price: S$65,000, OMV: S$17,984; ARF S$7,984 | COE $49,822');
+    expect([r.price, r.omv, r.arf, r.coe]).toEqual([65000, 17984, 7984, 49822]);
+  });
+
+  it('keeps multi-line copy working alongside inline labels', () => {
+    const r = parseListingText('Honda Vezel 1.5A X\nPrice $65,000 OMV $17,984\nARF\n$7,984\nMileage: 30,000 km');
+    expect(r.name).toBe('Honda Vezel 1.5A X');
+    expect([r.price, r.omv, r.arf, r.mileage]).toEqual([65000, 17984, 7984, 30000]);
+  });
+
+  it('takes a value from the next line when the label ends its line mid-text', () => {
+    const r = parseListingText('Price\n$47,800 OMV $33,419');
+    expect(r.price).toBe(47800);
+    expect(r.omv).toBe(33419);
+  });
+
+  it('does not match a label inside a longer word', () => {
+    expect(parseListingText('Pricelist $65,000').price).toBeUndefined();
+    expect(parseListingText('Coeur $49,822').coe).toBeUndefined();
+  });
+
+  it('rejects an inline non-numeric value but still reads the next pair', () => {
+    const r = parseListingText('Price POA OMV $17,984');
+    expect(r.price).toBeUndefined();
+    expect(r.omv).toBe(17984);
+  });
+
+  it('keeps the strict amount rules inline (exponent and bad comma groups)', () => {
+    expect(parseListingText('Price 1e5 OMV $17,984').price).toBeUndefined();
+    expect(parseListingText('Price 12,34 OMV $17,984').price).toBeUndefined();
+  });
+
+  it('stays fast on hostile repeated labels and whitespace', () => {
+    const hostile = [
+      'Price '.repeat(40000),
+      `price${' '.repeat(200000)}x`,
+      `reg${' '.repeat(200000)}`,
+      `Name:${' '.repeat(200000)}`,
+    ];
+    for (const text of hostile) {
+      const started = performance.now();
+      parseListingText(text);
+      expect(performance.now() - started).toBeLessThan(500);
+    }
+  });
+});

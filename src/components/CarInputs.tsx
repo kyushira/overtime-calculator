@@ -32,7 +32,7 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
       title="Your car"
       subtitle="Edit any figure; everything else updates."
       actions={
-        <button type="button" onClick={onReset} className={btnOutline}>
+        <button type="button" onClick={onReset} className={`${btnOutline} min-h-11`}>
           <RotateCcw size={14} strokeWidth={1.5} aria-hidden /> Reset
         </button>
       }
@@ -199,7 +199,7 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
             <button
               type="button"
               onClick={() => update({ salary: String(Math.round(otNet * 100) / 100) })}
-              className={`${btnOutline} w-full py-2`}
+              className={`${btnOutline} min-h-11 w-full py-2`}
             >
               Use OT net pay ({money(otNet)})
             </button>
