@@ -57,6 +57,14 @@ export function savedCarFigures(car: SavedCar, form: CarForm): SavedCarFigures {
   };
 }
 
+/**
+ * Whether the compare table needs its separate 0%-down row. At a 0% current downpayment that row
+ * repeats the "current downpayment" monthly figure, so the table drops it.
+ */
+export function showFullLoanRow(downPct: number): boolean {
+  return downPct > 0;
+}
+
 /** Form patch that loads a saved car's price and OMV into the calculator (percent mode, as typing a price does). */
 export function loadPatch(car: SavedCar): Partial<CarForm> | null {
   if (car.price === undefined) return null;

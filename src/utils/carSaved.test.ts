@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeCar, DEFAULT_CAR_FORM, type CarForm } from './car';
-import { currentDownPct, loadPatch, savedCarFigures } from './carSaved';
+import { currentDownPct, loadPatch, savedCarFigures, showFullLoanRow } from './carSaved';
 import type { SavedCar } from './savedCars';
 
 const form = (patch: Partial<CarForm> = {}): CarForm => ({ ...DEFAULT_CAR_FORM, ...patch });
@@ -79,5 +79,22 @@ describe('loadPatch', () => {
 
   it('refuses a car with no price', () => {
     expect(loadPatch(car({ price: undefined }))).toBeNull();
+  });
+});
+
+describe('showFullLoanRow', () => {
+  it('hides the 0%-down row when the current downpayment is already 0%', () => {
+    expect(showFullLoanRow(0)).toBe(false);
+  });
+
+  it('shows the 0%-down row when a downpayment is set', () => {
+    expect(showFullLoanRow(40)).toBe(true);
+    expect(showFullLoanRow(0.01)).toBe(true);
+  });
+
+  it('matches the duplicate it hides: at 0% the current and full-loan monthly figures are equal', () => {
+    const got = savedCarFigures(car(), form({ downPct: '0', price: '150000' }));
+    expect(got.downPct).toBe(0);
+    expect(got.monthly).toBeCloseTo(got.monthlyFullLoan!, 10);
   });
 });
