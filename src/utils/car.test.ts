@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   affordability,
+  compareDownpayments,
   computeCar,
   computeLoan,
   DEFAULT_CAR_FORM,
@@ -292,5 +293,77 @@ describe('migrateCarForm (carcalc.inputs.v1)', () => {
 
   it('accepts amt mode', () => {
     expect(migrateCarForm({ downMode: 'amt' }).downMode).toBe('amt');
+  });
+});
+
+describe('below-MAS downpayment (full loan / 0% down)', () => {
+  it('0% down finances the full price; instalment is on the full price', () => {
+    // interest = 150000 × 2.78% × 7 = 29190; repayable = 179190; instalment = 179190 ÷ 84
+    const r = computeCar(form({ downPct: '0' }));
+    expect(r.down).toBe(0);
+    expect(r.loan).toBe(150000);
+    expect(r.interest).toBeCloseTo(29190, 6);
+    expect(r.instalment).toBeCloseTo(179190 / 84, 6);
+    expect(r.downError).toBe('');
+  });
+
+  it('0% down is below MAS: minDownWarning is true and there is no downError', () => {
+    const r = computeCar(form({ downMode: 'pct', downPct: '0' }));
+    expect(r.minDownWarning).toBe(true);
+    expect(r.downError).toBe('');
+  });
+
+  it('100% down is valid, with no loan and no warning', () => {
+    const r = computeCar(form({ downPct: '100' }));
+    expect(r.downError).toBe('');
+    expect(r.loan).toBe(0);
+    expect(r.minDownWarning).toBe(false);
+  });
+
+  it('cash needed to reach MAS minimum = max(0, minDown − current downpayment)', () => {
+    expect(computeCar(form({ downPct: '0' })).cashToMinimum).toBe(60000);
+    expect(computeCar(form({ omv: '25000', downPct: '30' })).cashToMinimum).toBe(15000);
+    expect(computeCar(form({ downPct: '40' })).cashToMinimum).toBe(0);
+    expect(computeCar(form({ downPct: '100' })).cashToMinimum).toBe(0);
+  });
+
+  it('cash needed is 0 when the downpayment is invalid (over price)', () => {
+    expect(computeCar(form({ downMode: 'amt', downAmt: '999999' })).cashToMinimum).toBe(0);
+  });
+});
+
+describe('compareDownpayments (full loan vs MAS minimum vs current)', () => {
+  it('returns three rows in order: full loan, MAS minimum, current', () => {
+    const rows = compareDownpayments(form());
+    expect(rows.map((r) => r.id)).toEqual(['zero', 'mas', 'current']);
+  });
+
+  it('each row uses its own downpayment (OMV ≤ 20k → MAS minimum 30%)', () => {
+    const [zero, mas, current] = compareDownpayments(form({ omv: '15000', downPct: '10' }));
+    expect(zero).toMatchObject({ downPct: 0, down: 0, loan: 150000 });
+    expect(mas).toMatchObject({ downPct: 30, down: 45000, loan: 105000 });
+    expect(current).toMatchObject({ downPct: 10, down: 15000, loan: 135000 });
+  });
+
+  it('full-loan row by hand: interest 29190, instalment 179190 ÷ 84', () => {
+    const zero = compareDownpayments(DEFAULT_CAR_FORM)[0];
+    expect(zero.interest).toBeCloseTo(29190, 6);
+    expect(zero.instalment).toBeCloseTo(179190 / 84, 6);
+  });
+
+  it('MAS row matches the 40% default case (loan 90000, instalment 1279.93)', () => {
+    const mas = compareDownpayments(DEFAULT_CAR_FORM)[1];
+    expect(mas.down).toBe(60000);
+    expect(mas.interest).toBeCloseTo(17514, 6);
+    expect(mas.instalment).toBeCloseTo(1279.928571, 5);
+  });
+
+  it('current row agrees with computeCar for the same form', () => {
+    const f = form({ downPct: '55' });
+    const current = compareDownpayments(f)[2];
+    const r = computeCar(f);
+    expect(current.instalment).toBeCloseTo(r.instalment, 9);
+    expect(current.interest).toBeCloseTo(r.interest, 9);
+    expect(computeCar(f).comparison).toEqual(compareDownpayments(f));
   });
 });

@@ -123,6 +123,35 @@ export function CarResults({ result }: { result: CarResult }) {
         <Tile label="Total cost of ownership" value={money(result.tco)} sub={`over ${result.tenure.months} months (${tenureLabel})`} />
       </div>
 
+      <Card title="Downpayment comparison" subtitle="Same car, tenure and rate; only the downpayment changes.">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[20rem] text-left text-[13px] tabular-nums">
+            <caption className="sr-only">Monthly instalment and total interest for full loan, MAS minimum and your downpayment</caption>
+            <thead>
+              <tr className="text-xs text-slate-500">
+                <th scope="col" className="py-1.5 font-medium">Downpayment</th>
+                <th scope="col" className="py-1.5 text-right font-medium">Instalment / mth</th>
+                <th scope="col" className="py-1.5 text-right font-medium">Total interest</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.comparison.map((row) => (
+                <tr key={row.id} className="border-t border-slate-200">
+                  <th scope="row" className="py-2 pr-2 text-left font-medium text-slate-700">
+                    {row.label}
+                    <span className="block text-xs font-normal text-slate-500">
+                      {row.downPct}% · {money(row.down)} down · loan {moneyWhole(row.loan)}
+                    </span>
+                  </th>
+                  <td className="py-2 text-right font-semibold text-slate-900">{money(row.instalment)}</td>
+                  <td className="py-2 text-right text-slate-900">{money(row.interest)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         <Card title="Monthly breakdown">
           <Donut result={result} />

@@ -227,6 +227,49 @@ export interface RunningItemResult {
   monthly: number;
 }
 
+export interface DownpaymentRow {
+  id: 'zero' | 'mas' | 'current';
+  label: string;
+  downPct: number;
+  down: number;
+  loan: number;
+  instalment: number;
+  interest: number;
+}
+
+/**
+ * Full loan (0% down), MAS minimum, and the current downpayment, all on the same
+ * price, OMV, tenure and rate as the form. Pure; used by the comparison strip.
+ */
+export function compareDownpayments(f: CarForm): DownpaymentRow[] {
+  const price = Math.max(0, parseNum(f.price));
+  const omvRaw = f.omv.trim();
+  const omv = omvRaw === '' ? null : Math.max(0, parseNum(omvRaw));
+  const rate = Math.max(0, parseNum(f.rate));
+  const months = tenureMonths(parseNum(f.years), parseNum(f.months)).months;
+  const current = resolveDownpayment(price, f.downMode, parseNum(f.downPct), parseNum(f.downAmt));
+  const masPct = minDownRatio(omv) * 100;
+
+  const row = (id: DownpaymentRow['id'], label: string, down: number): DownpaymentRow => {
+    const l = computeLoan({ price, omv, down, months, rate });
+    return {
+      id,
+      label,
+      downPct: round2(price > 0 ? (down / price) * 100 : 0),
+      down,
+      loan: l.loan,
+      instalment: l.instalment,
+      interest: l.interest,
+    };
+  };
+
+  return [
+    row('zero', 'Full loan (0% down)', 0),
+    row('mas', 'MAS minimum', round2(price * (masPct / 100))),
+    row('current', 'Your downpayment', current.down),
+  ];
+}
+
 export interface CarResult {
   price: number;
   omv: number | null;
@@ -241,6 +284,10 @@ export interface CarResult {
   downError: string;
   /** Below MAS minimum, shown as a warning (only when the downpayment itself is valid). */
   minDownWarning: boolean;
+  /** S$ still needed up front to reach the MAS minimum; 0 when not below it. */
+  cashToMinimum: number;
+  /** Full loan / MAS minimum / current downpayment, side by side. */
+  comparison: DownpaymentRow[];
   loan: number;
   maxLoan: number;
   minDown: number;
@@ -285,6 +332,8 @@ export function computeCar(f: CarForm): CarResult {
   const running = runningMonthly(runningItems.map((r) => ({ value: r.monthly, per: 'month' })));
   const t = totals({ instalment: loan.instalment, running, down: dp.down, repayable: loan.repayable, months: tenure.months });
 
+  const minDownWarning = loan.belowMin && price > 0 && !dp.error;
+
   const negErrors: CarResult['negErrors'] = {};
   if (parseNum(f.price) < 0) negErrors.price = NEG;
   if (omvRaw !== '' && parseNum(omvRaw) < 0) negErrors.omv = NEG;
@@ -303,7 +352,9 @@ export function computeCar(f: CarForm): CarResult {
     downPctText: dp.downPctText,
     downSharePct: price > 0 ? round2((dp.down / price) * 100) : 0,
     downError: dp.error,
-    minDownWarning: loan.belowMin && price > 0 && !dp.error,
+    minDownWarning,
+    cashToMinimum: minDownWarning ? round2(Math.max(0, loan.minDown - dp.down)) : 0,
+    comparison: compareDownpayments(f),
     loan: loan.loan,
     maxLoan: loan.maxLoan,
     minDown: loan.minDown,
