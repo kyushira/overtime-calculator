@@ -222,7 +222,11 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
                   coeCheck.overCoe ? 'border border-sat/20 bg-sat-bg text-sat' : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                <span className="min-w-0 flex-1">{coeCheck.message}</span>
+                {coeCheck.overCoe && <TriangleAlert size={16} strokeWidth={1.5} aria-hidden className="mt-0.5 shrink-0" />}
+                <span className="min-w-0 flex-1">
+                  {coeCheck.message}
+                  {coeCheck.overCoe && ' Tenure is longer than the COE.'}
+                </span>
                 <button
                   type="button"
                   onClick={() => update({ ...splitMonths(defaultTenure(coeLeft)) })}
