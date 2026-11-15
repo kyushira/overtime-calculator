@@ -29,6 +29,12 @@ export interface CarForm {
   downAmt: string;
   years: string;
   months: string;
+  /** How the COE is entered: years + months left, or the expiry date. Blank COE = no COE. */
+  coeMode: 'left' | 'expiry';
+  coeYears: string;
+  coeMonths: string;
+  /** ISO 'YYYY-MM-DD', or ''. */
+  coeExpiry: string;
   rate: string;
   salary: string;
   running: Record<RunningId, string>;
@@ -45,6 +51,10 @@ export const DEFAULT_CAR_FORM: CarForm = {
   downAmt: '',
   years: '7',
   months: '0',
+  coeMode: 'left',
+  coeYears: '',
+  coeMonths: '',
+  coeExpiry: '',
   rate: '2.78',
   salary: '',
   running: Object.fromEntries(RUNNING_COSTS.map((r) => [r.id, String(r.def)])) as Record<RunningId, string>,
@@ -397,6 +407,10 @@ export function migrateCarForm(raw: unknown): CarForm {
     downAmt: str(raw.downAmt, d.downAmt),
     years: str(raw.years, d.years),
     months: str(raw.months, d.months),
+    coeMode: raw.coeMode === 'expiry' || raw.coeMode === 'left' ? raw.coeMode : d.coeMode,
+    coeYears: str(raw.coeYears, d.coeYears),
+    coeMonths: str(raw.coeMonths, d.coeMonths),
+    coeExpiry: str(raw.coeExpiry, d.coeExpiry),
     rate: str(raw.rate, d.rate),
     salary: str(raw.salary, d.salary),
     running,

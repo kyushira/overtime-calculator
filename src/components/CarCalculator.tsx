@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { computeCar, type CarForm, DEFAULT_CAR_FORM, migrateCarForm } from '../utils/car';
+import { applyCoePatch } from '../utils/coe';
 import { draftFromListing, importPatch, type ImportDraft, type ImportedListing } from '../utils/carImport';
 import { SavedCars } from './car/SavedCars';
 import { SgcarmartImport } from './car/SgcarmartImport';
@@ -24,7 +25,8 @@ export function CarCalculator({ otNet }: Props) {
   const update = (patch: Partial<CarForm>) => setForm((f) => ({ ...f, ...patch }));
 
   const onImported = (listing: ImportedListing) => {
-    update(importPatch(listing.fields));
+    // An imported COE moves the tenure to the COE's default, like typing it does.
+    update(applyCoePatch(form, importPatch(listing.fields), new Date()));
     setDraft(draftFromListing(listing));
   };
 

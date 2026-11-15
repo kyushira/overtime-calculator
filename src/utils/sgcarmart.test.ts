@@ -3,6 +3,9 @@ import { isAllowedSgcarmartUrl, parseListingHtml, parseListingText } from './sgc
 import audiHtml from './__fixtures__/sgcarmart-audi-a4-1551328.html?raw';
 import hondaHtml from './__fixtures__/sgcarmart-honda-vezel-1551624.html?raw';
 
+// Fixed "today" for every COE-left and reg-date calculation: 15 Nov 2026, local time.
+const NOW = new Date(2026, 10, 15);
+
 describe('isAllowedSgcarmartUrl', () => {
   it.each([
     'https://www.sgcarmart.com/used-cars/info/audi-a4-20a-tfsi-1551328/',
@@ -135,20 +138,21 @@ describe('h1 parsing cost', () => {
 
 describe('parseListingHtml (real listing fixtures)', () => {
   it('parses the Audi A4 listing fields', () => {
-    expect(parseListingHtml(audiHtml)).toEqual({
+    expect(parseListingHtml(audiHtml, NOW)).toEqual({
       name: 'Audi A4 2.0A TFSI S-tronic',
       year: 2018,
       price: 47800,
       omv: 33419,
       arf: 38787,
       coe: 33900,
+      coeExpiry: '2028-07-09',
       mileage: 69030,
       missing: [],
     });
   });
 
   it('parses the Honda Vezel listing and reports mileage as missing (N.A.)', () => {
-    const result = parseListingHtml(hondaHtml);
+    const result = parseListingHtml(hondaHtml, NOW);
     expect(result).toEqual({
       name: 'Honda Vezel 1.5A X (COE till 07/2030)',
       year: 2015,
@@ -156,6 +160,7 @@ describe('parseListingHtml (real listing fixtures)', () => {
       omv: 17984,
       arf: 7984,
       coe: 49822,
+      coeExpiry: '2030-07-31',
       missing: ['mileage'],
     });
     expect(result.mileage).toBeUndefined();
@@ -165,13 +170,13 @@ describe('parseListingHtml (real listing fixtures)', () => {
 describe('parseListingHtml (defensive)', () => {
   it('returns every field as missing for empty input', () => {
     expect(parseListingHtml('')).toEqual({
-      missing: ['name', 'year', 'price', 'omv', 'arf', 'coe', 'mileage'],
+      missing: ['name', 'year', 'price', 'omv', 'arf', 'coe', 'coeExpiry', 'mileage'],
     });
   });
 
   it.each([null, undefined, 123, {}, ['<html>']])('never throws on non-string %j', (value) => {
     expect(() => parseListingHtml(value as unknown as string)).not.toThrow();
-    expect(parseListingHtml(value as unknown as string).missing).toHaveLength(7);
+    expect(parseListingHtml(value as unknown as string).missing).toHaveLength(8);
   });
 
   it('tolerates an unrelated HTML page', () => {
@@ -206,13 +211,14 @@ describe('parseListingText (paste fallback)', () => {
       'Mileage: 69,030 km',
       'Reg Date: 10-Jul-2018',
     ].join('\n');
-    expect(parseListingText(text)).toEqual({
+    expect(parseListingText(text, NOW)).toEqual({
       name: 'Audi A4 2.0A TFSI S-tronic',
       year: 2018,
       price: 47800,
       omv: 33419,
       arf: 38787,
       coe: 33900,
+      coeExpiry: '2028-07-10',
       mileage: 69030,
       missing: [],
     });
@@ -237,11 +243,11 @@ describe('parseListingText (paste fallback)', () => {
 
   it.each([null, undefined, 5, {}])('never throws on non-string %j', (value) => {
     expect(() => parseListingText(value as unknown as string)).not.toThrow();
-    expect(parseListingText(value as unknown as string).missing).toHaveLength(7);
+    expect(parseListingText(value as unknown as string).missing).toHaveLength(8);
   });
 
   it('returns all fields missing for empty text', () => {
-    expect(parseListingText('   \n\n  ').missing).toHaveLength(7);
+    expect(parseListingText('   \n\n  ').missing).toHaveLength(8);
   });
 });
 
@@ -252,7 +258,7 @@ describe('parseListingText (labels inline in one line)', () => {
     expect(r.omv).toBe(17984);
     expect(r.arf).toBe(7984);
     expect(r.coe).toBe(49822);
-    expect(r.missing).toEqual(['name', 'year', 'mileage']);
+    expect(r.missing).toEqual(['name', 'year', 'coeExpiry', 'mileage']);
   });
 
   it('reads the Audi one-liner', () => {
@@ -305,5 +311,156 @@ describe('parseListingText (labels inline in one line)', () => {
       parseListingText(text);
       expect(performance.now() - started).toBeLessThan(500);
     }
+  });
+
+  it('stays fast on hostile COE phrases and durations', () => {
+    const hostile = [
+      'COE left '.repeat(30000),
+      '1 yr '.repeat(40000) + 'COE left',
+      'COE till ' + ' '.repeat(200000) + 'x',
+      'COE expiry ' + '1-'.repeat(100000),
+      'Reg Date ' + '1'.repeat(200000),
+    ];
+    for (const text of hostile) {
+      const started = performance.now();
+      parseListingText(text, NOW);
+      expect(performance.now() - started).toBeLessThan(500);
+    }
+  });
+});
+
+// ---------- COE expiry ----------
+
+describe('COE expiry from the real fixtures', () => {
+  it('Audi A4: reads the RSC coe_left "1yr 7mths 24days COE left" (not the reg date)', () => {
+    // Reg 10-Jul-2018 + 10 years would be 2028-07-10; the page's own time-left gives 2028-07-09.
+    expect(parseListingHtml(audiHtml, NOW).coeExpiry).toBe('2028-07-09');
+  });
+
+  it('Honda Vezel: reads the explicit "COE till 07/2030" title as the month end', () => {
+    expect(parseListingHtml(hondaHtml, NOW).coeExpiry).toBe('2030-07-31');
+  });
+
+  it('Honda Vezel without its title: falls back to the RSC coe_left "3yrs 8mths 16days COE left"', () => {
+    const html = hondaHtml.replaceAll('(COE till 07/2030)', '');
+    const result = parseListingHtml(html, NOW);
+    expect(result.name).toBe('Honda Vezel 1.5A X');
+    expect(result.coeExpiry).toBe('2030-07-31');
+  });
+
+  it('Audi A4 with coe_left removed: falls back to reg date 10-Jul-2018 + 10 years', () => {
+    const html = audiHtml.replaceAll('1yr 7mths 24days COE left', 'N.A.');
+    expect(parseListingHtml(html, NOW).coeExpiry).toBe('2028-07-10');
+  });
+
+  it('uses the injected now for the time-left maths', () => {
+    // Same listing, a year later: 1yr 7mths 24days from 1 Jan 2027.
+    expect(parseListingHtml(audiHtml, new Date(2027, 0, 1)).coeExpiry).toBe('2028-08-25');
+  });
+
+  it('works with the default now (no argument) and still returns an ISO date', () => {
+    expect(parseListingHtml(audiHtml).coeExpiry).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('COE expiry from pasted text', () => {
+  it.each([
+    ['COE left after a label', 'COE left: 9yrs 2mths', '2036-01-15'],
+    ['duration in brackets before the phrase', 'Price $65,000 (9yrs 2mths COE left)', '2036-01-15'],
+    ['singular units', '1yr 1mth 1day COE left', '2027-12-16'],
+    ['long unit words', '2 years 3 months COE left', '2029-02-15'],
+    ['days only', '0yrs 0mths 30days COE left', '2026-12-15'],
+    ['duration after the phrase, spread over lines', 'COE left\n9 yrs 2 mths 3 days', '2036-01-18'],
+  ])('reads a time left: %s', (_label, text, expected) => {
+    expect(parseListingText(text, NOW).coeExpiry).toBe(expected);
+  });
+
+  it.each([
+    ['dash, month name', 'COE expiry 12-Mar-2029', '2029-03-12'],
+    ['colon, ISO date', 'COE expiry: 2029-03-12', '2029-03-12'],
+    ['spaced month name', 'COE expires 12 March 2029', '2029-03-12'],
+    ['dd/mm/yyyy', 'COE expiry 12/03/2029', '2029-03-12'],
+    ['month and year only (last day of month)', 'Honda Vezel COE till 07/2030', '2030-07-31'],
+  ])('reads an explicit expiry: %s', (_label, text, expected) => {
+    expect(parseListingText(text, NOW).coeExpiry).toBe(expected);
+  });
+
+  it('prefers an explicit expiry over a time left and the reg date', () => {
+    expect(parseListingText('Reg Date 10-Jul-2018\n1yr 7mths COE left\nCOE expiry 12-Mar-2029', NOW).coeExpiry).toBe(
+      '2029-03-12',
+    );
+  });
+
+  it('prefers a time left over the reg date', () => {
+    expect(parseListingText('Reg Date 10-Jul-2018\n1yr 7mths COE left', NOW).coeExpiry).toBe('2028-06-15');
+  });
+
+  it('uses reg date + 10 years when nothing else is given', () => {
+    expect(parseListingText('Reg Date: 10-Jul-2018', NOW).coeExpiry).toBe('2028-07-10');
+    expect(parseListingText('Reg Date 2018-07-10', NOW).coeExpiry).toBe('2028-07-10');
+  });
+
+  it('does not use a reg date whose +10 years is already past (COE was renewed)', () => {
+    // 06-Aug-2015 + 10y = 2025, before 15 Nov 2026. The real COE is unknown: report missing.
+    const r = parseListingText('Reg Date: 06-Aug-2015', NOW);
+    expect(r.coeExpiry).toBeUndefined();
+    expect(r.missing).toContain('coeExpiry');
+  });
+
+  it('does not read a time span as the COE price', () => {
+    const r = parseListingText('COE: 9yrs 2mths', NOW);
+    expect(r.coe).toBeUndefined();
+    expect(r.missing).toContain('coe');
+  });
+
+  it('does not take a COE-left line as the listing name', () => {
+    const r = parseListingText('1yr 7mths 24days COE left\nHonda Vezel 1.5A X', NOW);
+    expect(r.name).toBe('Honda Vezel 1.5A X');
+  });
+
+  it('keeps a listing name that mentions the COE expiry', () => {
+    expect(parseListingText('Honda Vezel COE till 07/2030', NOW).name).toBe('Honda Vezel COE till 07/2030');
+  });
+
+  it('reports coeExpiry as missing when the text has no COE data', () => {
+    const r = parseListingText('Price $65,000', NOW);
+    expect(r.coeExpiry).toBeUndefined();
+    expect(r.missing).toContain('coeExpiry');
+  });
+});
+
+describe('COE expiry sanity checks (nonsense becomes missing)', () => {
+  it.each([
+    ['11 years left (over the COE maximum)', 'COE left: 11yrs 0mths'],
+    ['14 months (not a real token)', 'COE left: 3yrs 14mths'],
+    ['25 years left', 'COE left: 25yrs'],
+    ['expiry beyond the COE maximum', 'COE expiry 12-Mar-2045'],
+    ['expiry before 1990', 'COE expiry 12-Mar-1985'],
+    ['expiry past 2100', 'COE expiry 12-Mar-2101'],
+    ['impossible calendar day', 'COE expiry 31-Feb-2029'],
+    ['impossible ISO month', 'COE expiry: 2029-13-01'],
+    ['reg date whose +10 lands past 2100', 'Reg Date 10-Jul-2095'],
+    ['reg date before 1990', 'Reg Date 10-Jul-1985'],
+    ['giant number of years', 'COE left: 99999999999yrs'],
+  ])('rejects %s', (_label, text) => {
+    const r = parseListingText(text, NOW);
+    expect(r.coeExpiry).toBeUndefined();
+    expect(r.missing).toContain('coeExpiry');
+  });
+
+  it('never throws on an invalid now', () => {
+    expect(() => parseListingText('1yr 7mths COE left', new Date('not a date'))).not.toThrow();
+    expect(parseListingText('1yr 7mths COE left', new Date('not a date')).coeExpiry).toBeUndefined();
+    expect(parseListingHtml(audiHtml, new Date('not a date')).coeExpiry).toBeUndefined();
+  });
+});
+
+describe('COE expiry date maths', () => {
+  it('clamps the day to the target month (31 Jan + 1 month = 28 Feb)', () => {
+    expect(parseListingText('1mth COE left', new Date(2027, 0, 31)).coeExpiry).toBe('2027-02-28');
+  });
+
+  it('is the same wherever the process runs (local date components, UTC arithmetic)', () => {
+    expect(parseListingText('2yrs COE left', new Date(2026, 10, 15, 23, 59)).coeExpiry).toBe('2028-11-15');
   });
 });

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import type { CarForm } from '../../utils/car';
 import { parseNum } from '../../utils/car';
+import { applyCoePatch, coeExpiryOf, formatCoeLeft } from '../../utils/coe';
 import type { ImportDraft } from '../../utils/carImport';
 import { currentDownPct, loadPatch, savedCarFigures } from '../../utils/carSaved';
 import { money, moneyWhole } from '../../utils/format';
@@ -56,11 +57,13 @@ export function SavedCars({ form, update, draft }: Props) {
       return;
     }
     const omv = form.omv.trim() === '' ? undefined : parseNum(form.omv);
+    const coeExpiry = coeExpiryOf(form, new Date());
     const input = {
       name: effectiveName,
       price,
       downPct: round2(currentDownPct(form)),
       ...(omv !== undefined ? { omv } : {}),
+      ...(coeExpiry !== undefined ? { coeExpiry } : {}),
       ...(draft?.link !== undefined ? { link: draft.link } : {}),
       ...(draft?.arf !== undefined ? { arf: draft.arf } : {}),
       ...(draft?.coe !== undefined ? { coe: draft.coe } : {}),
@@ -84,7 +87,7 @@ export function SavedCars({ form, update, draft }: Props) {
   function onLoad(car: SavedCar) {
     const patch = loadPatch(car);
     if (!patch) return;
-    update(patch);
+    update(applyCoePatch(form, patch, new Date()));
     setMessage(`Loaded ${car.name} into the calculator.`);
   }
 
@@ -111,6 +114,7 @@ export function SavedCars({ form, update, draft }: Props) {
   }
 
   const downPctText = round2(currentDownPct(form));
+  const today = new Date();
 
   return (
     <Card title="Saved cars" subtitle="Save cars you are considering and compare them side by side.">
@@ -160,11 +164,12 @@ export function SavedCars({ form, update, draft }: Props) {
       ) : (
         <>
           <p className="mt-3 text-xs text-slate-500">
-            Monthly figures use the calculator&apos;s tenure and rate at the {downPctText}% downpayment set now. Tap a car to load its price and OMV.
+            Monthly figures use the calculator&apos;s tenure and rate at the {downPctText}% downpayment set now
+            {cars.some((c) => c.coeExpiry !== undefined) ? ', capped at each car’s COE left' : ''}. Tap a car to load its price and OMV.
           </p>
           <ul className="mt-2">
             {cars.map((car) => {
-              const figs = savedCarFigures(car, form);
+              const figs = savedCarFigures(car, form, today);
               const isSelected = selected.includes(car.id);
               const loadable = car.price !== undefined && car.price > 0;
               const atLimit = selected.length >= MAX_COMPARE && !isSelected;
@@ -194,6 +199,9 @@ export function SavedCars({ form, update, draft }: Props) {
                           {figs.downPct}% down
                           {car.downPct !== undefined && Math.abs(car.downPct - figs.downPct) > 0.01
                             ? ` (saved at ${car.downPct}%)`
+                            : ''}
+                          {figs.coeLeft !== null
+                            ? ` · COE left ${formatCoeLeft(figs.coeLeft)}${figs.tenureCapped ? ' (loan capped)' : ''}`
                             : ''}
                         </>
                       ) : (

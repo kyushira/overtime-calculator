@@ -294,6 +294,29 @@ describe('migrateCarForm (carcalc.inputs.v1)', () => {
   it('accepts amt mode', () => {
     expect(migrateCarForm({ downMode: 'amt' }).downMode).toBe('amt');
   });
+
+  it('an old saved form (no COE fields) loads with blank COE and the left mode', () => {
+    const old = { price: '99000', omv: '', downMode: 'pct', downPct: '40', downAmt: '', years: '7', months: '0', rate: '2.78', salary: '', running: {} };
+    const m = migrateCarForm(old);
+    expect(m.coeMode).toBe('left');
+    expect(m.coeYears).toBe('');
+    expect(m.coeMonths).toBe('');
+    expect(m.coeExpiry).toBe('');
+    expect(m.price).toBe('99000');
+    expect(computeCar(m).tenure.months).toBe(84);
+  });
+
+  it('keeps saved COE fields and defaults a bad coeMode to left', () => {
+    const m = migrateCarForm({ coeMode: 'expiry', coeExpiry: '2029-03-15', coeYears: 3 });
+    expect(m.coeMode).toBe('expiry');
+    expect(m.coeExpiry).toBe('2029-03-15');
+    expect(m.coeYears).toBe('');
+    expect(migrateCarForm({ coeMode: 'sideways' }).coeMode).toBe('left');
+  });
+
+  it('the default form has a blank COE', () => {
+    expect(DEFAULT_CAR_FORM).toMatchObject({ coeMode: 'left', coeYears: '', coeMonths: '', coeExpiry: '' });
+  });
 });
 
 describe('below-MAS downpayment (full loan / 0% down)', () => {

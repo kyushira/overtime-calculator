@@ -201,6 +201,7 @@ export function CarResults({ result }: { result: CarResult }) {
           <li><b>Downpayment:</b> <code>S$ = Price × % ÷ 100</code>, <code>% = S$ ÷ Price × 100</code>; changing price keeps the %.</li>
           <li><b>Loan</b> = <code>Car Price − Downpayment</code></li>
           <li><b>Tenure:</b> <code>n = Years × 12 + Months</code> (1–84); years in formula = <code>n ÷ 12</code></li>
+          <li><b>COE:</b> entering the COE left sets the tenure to the COE months left (max 84); a longer tenure is flagged, not blocked.</li>
           <li><b>Total Interest</b> = <code>Loan × (Rate ÷ 100) × (n ÷ 12)</code></li>
           <li><b>Monthly Instalment</b> = <code>(Loan + Total Interest) ÷ n</code></li>
           <li><b>EIR (approx.)</b> ≈ <code>Flat Rate × 2 × n ÷ (n + 1)</code></li>

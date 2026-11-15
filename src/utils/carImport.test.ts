@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   draftFromListing,
+  formatCoeExpiry,
   importErrorMessage,
   importPatch,
   listingFromParse,
@@ -10,28 +11,65 @@ import {
 import { parseListingText } from './sgcarmart';
 
 describe('importPatch (listing fields -> form patch)', () => {
+  // A listing without a COE expiry clears the COE inputs, so they match the OMV rule.
+  const COE_CLEARED = { coeMode: 'left', coeYears: '', coeMonths: '', coeExpiry: '' };
+
   it('writes price and omv as strings and switches to percent mode', () => {
-    expect(importPatch({ price: 47800, omv: 33419 })).toEqual({ price: '47800', omv: '33419', downMode: 'pct' });
+    expect(importPatch({ price: 47800, omv: 33419 })).toEqual({
+      price: '47800',
+      omv: '33419',
+      downMode: 'pct',
+      ...COE_CLEARED,
+    });
   });
 
   it('keeps the form price when the listing gave none', () => {
-    expect(importPatch({ omv: 20000 })).toEqual({ omv: '20000' });
-    expect(importPatch({})).toEqual({ omv: '' });
-    expect(importPatch({ price: 0 })).toEqual({ price: '0', downMode: 'pct', omv: '' });
+    expect(importPatch({ omv: 20000 })).toEqual({ omv: '20000', ...COE_CLEARED });
+    expect(importPatch({})).toEqual({ omv: '', ...COE_CLEARED });
+    expect(importPatch({ price: 0 })).toEqual({ price: '0', downMode: 'pct', omv: '', ...COE_CLEARED });
   });
 
   it('clears a stale OMV when the listing has none (previous car must not carry over)', () => {
     // Previous car had OMV 33,419 (above the S$20k cap); the new listing has price only.
     const previous = { omv: '33419' };
     const patch = importPatch({ price: 65000 });
-    expect({ ...previous, ...patch }).toEqual({ omv: '', price: '65000', downMode: 'pct' });
+    expect({ ...previous, ...patch }).toEqual({ omv: '', price: '65000', downMode: 'pct', ...COE_CLEARED });
   });
 
-  it('never touches non-form fields (ARF, COE, year, mileage, name)', () => {
+  it('clears a stale COE expiry when the listing has none (previous car must not carry over)', () => {
+    // Previous car was on expiry mode with a date; the new listing has no COE expiry.
+    const previous = { coeMode: 'expiry', coeYears: '', coeMonths: '', coeExpiry: '2030-07-31' };
+    const patch = importPatch({ price: 65000, omv: 17984 });
+    expect({ ...previous, ...patch }).toMatchObject({ coeMode: 'left', coeExpiry: '', coeYears: '', coeMonths: '' });
+  });
+
+  it('switches to expiry mode with the ISO date when the listing gives one', () => {
+    const patch = importPatch({ price: 65000, omv: 17984, coeExpiry: '2030-07-31' });
+    expect(patch).toEqual({
+      price: '65000',
+      downMode: 'pct',
+      omv: '17984',
+      coeMode: 'expiry',
+      coeExpiry: '2030-07-31',
+    });
+  });
+
+  it('never touches non-form fields (ARF, COE price, year, mileage, name)', () => {
     const patch = importPatch({ name: 'Honda Vezel', arf: 1, coe: 2, year: 2018, mileage: 3 });
-    // Only OMV is ever written here (cleared, because the listing gave none); nothing else leaks in.
-    expect(Object.keys(patch)).toEqual(['omv']);
+    // Only OMV and the COE-expiry inputs are written here; the COE price and the rest stay out.
+    expect(Object.keys(patch).sort()).toEqual(['coeExpiry', 'coeMode', 'coeMonths', 'coeYears', 'omv']);
     expect(patch.omv).toBe('');
+  });
+
+  it('formatCoeExpiry shows the date as "12 Mar 2029"', () => {
+    expect(formatCoeExpiry('2029-03-12')).toBe('12 Mar 2029');
+    expect(formatCoeExpiry('2030-07-31')).toBe('31 Jul 2030');
+    expect(formatCoeExpiry('nonsense')).toBe('nonsense');
+  });
+
+  it('draftFromListing carries the COE expiry only when present', () => {
+    expect(draftFromListing({ fields: { coeExpiry: '2030-07-31' }, missing: [] }).coeExpiry).toBe('2030-07-31');
+    expect(draftFromListing({ fields: { price: 1 }, missing: [] })).not.toHaveProperty('coeExpiry');
   });
 });
 
@@ -59,7 +97,7 @@ describe('listingFromResponse / listingFromParse', () => {
     const listing = listingFromParse(parsed);
     expect(listing.link).toBeUndefined();
     expect(listing.fields).toEqual({ price: 12300, omv: 9000 });
-    expect(listing.missing).toEqual(['name', 'year', 'arf', 'coe', 'mileage']);
+    expect(listing.missing).toEqual(['name', 'year', 'arf', 'coe', 'coeExpiry', 'mileage']);
   });
 });
 

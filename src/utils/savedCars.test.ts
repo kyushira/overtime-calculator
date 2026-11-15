@@ -306,3 +306,34 @@ describe('migrate', () => {
     expect(migrate({ foo: 'bar' })).toEqual({ version: 1, cars: [] });
   });
 });
+
+describe('coeExpiry on saved cars', () => {
+  const base = { id: 'c', name: 'Car', savedAt: NOW.toISOString() };
+
+  it('keeps a valid ISO coeExpiry', () => {
+    const [car] = migrate({ version: 1, cars: [{ ...base, coeExpiry: '2029-03-15' }] }).cars;
+    expect(car.coeExpiry).toBe('2029-03-15');
+  });
+
+  it.each(['2026-02-30', '2027-02-29', '2026-13-01', '15/03/2029', 'soon', '', 42, null])(
+    'drops a bad coeExpiry %j and keeps the car',
+    (bad) => {
+      const [car] = migrate({ version: 1, cars: [{ ...base, coeExpiry: bad }] }).cars;
+      expect(car.name).toBe('Car');
+      expect(car.coeExpiry).toBeUndefined();
+    },
+  );
+
+  it('an old document with no coeExpiry loads with none', () => {
+    const [car] = migrate({ version: 1, cars: [{ ...base, price: 47800 }] }).cars;
+    expect(car.coeExpiry).toBeUndefined();
+    expect(car.price).toBe(47800);
+  });
+
+  it('round-trips a coeExpiry through storage', () => {
+    const storage = new MemoryStorage();
+    const cars = addCar([], { name: 'Audi', price: 1, coeExpiry: '2029-03-15' }, { now: NOW, id: 'k' });
+    expect(saveCars(cars, storage)).toBe(true);
+    expect(loadCars(storage)[0].coeExpiry).toBe('2029-03-15');
+  });
+});

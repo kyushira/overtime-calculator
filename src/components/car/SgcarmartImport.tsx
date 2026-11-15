@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { ChevronDown, Link2 } from 'lucide-react';
 import {
   fieldLabel,
+  formatCoeExpiry,
   type ImportedListing,
   importErrorMessage,
   listingFromParse,
@@ -44,6 +45,7 @@ function infoChips(listing: ImportedListing) {
   if (f.mileage !== undefined) chips.push({ label: 'Mileage', value: `${num(f.mileage, 0)} km` });
   if (f.arf !== undefined) chips.push({ label: 'ARF', value: moneyWhole(f.arf) });
   if (f.coe !== undefined) chips.push({ label: 'COE', value: moneyWhole(f.coe) });
+  if (f.coeExpiry !== undefined) chips.push({ label: 'COE expiry', value: formatCoeExpiry(f.coeExpiry) });
   return chips;
 }
 
@@ -111,7 +113,11 @@ export function SgcarmartImport({ onImported }: Props) {
   const chips = listing ? infoChips(listing) : [];
   // Price and OMV are the two numbers the form takes; name/ARF/COE/year/mileage are shown above.
   const formMissing: ListingField[] = listing ? listing.missing.filter((m) => m === 'price' || m === 'omv') : [];
-  const otherMissing: ListingField[] = listing ? listing.missing.filter((m) => m !== 'price' && m !== 'omv') : [];
+  // COE expiry is shown on its own below: a miss clears the form's COE, so the user must see it.
+  const otherMissing: ListingField[] = listing
+    ? listing.missing.filter((m) => m !== 'price' && m !== 'omv' && m !== 'coeExpiry')
+    : [];
+  const coeMissing = listing !== null && listing.missing.includes('coeExpiry');
 
   return (
     <Card title="Import from sgcarmart" subtitle="Paste a used-car listing link to fill in the price and OMV.">
@@ -179,6 +185,11 @@ export function SgcarmartImport({ onImported }: Props) {
                 </p>
               ),
             )}
+            {coeMissing && (
+              <p className="rounded-lg border border-sat/20 bg-sat-bg px-3 py-2 text-sat">
+                {missingMessage('coeExpiry')}. COE is cleared until you enter it.
+              </p>
+            )}
             {otherMissing.length > 0 && (
               <p className="text-xs text-slate-500">Not on the listing: {otherMissing.map(fieldLabel).join(', ')}.</p>
             )}
@@ -193,7 +204,7 @@ export function SgcarmartImport({ onImported }: Props) {
         </summary>
         <div className="mt-3 space-y-3">
           <SectionLabel>Use this if the link will not load</SectionLabel>
-          <Field label="Listing text" hint="Lines like “Price: S$47,800” or “OMV: S$33,419”. Name, year, ARF, COE and mileage are read too.">
+          <Field label="Listing text" hint="Lines like “Price: S$47,800” or “OMV: S$33,419”. Name, year, ARF, COE, COE left and mileage are read too.">
             <textarea
               rows={5}
               value={pasteText}

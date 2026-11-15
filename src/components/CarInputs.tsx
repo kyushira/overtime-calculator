@@ -1,7 +1,8 @@
 import { RotateCcw, TriangleAlert } from 'lucide-react';
 import { parseNum, RUNNING_COSTS, type CarForm, type CarResult } from '../utils/car';
+import { applyCoePatch, checkTenureVsCoe, coeMonthsLeft, defaultTenure, splitMonths, switchCoeMode, type CoeMode } from '../utils/coe';
 import { money, moneyWhole } from '../utils/format';
-import { btnOutline, Card, Field, NumInput, SectionLabel } from './ui';
+import { btnOutline, Card, Field, inputClass, NumInput, SectionLabel } from './ui';
 
 interface Props {
   form: CarForm;
@@ -26,6 +27,14 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
   // The active downpayment field shows what was typed; the other shows the derived value.
   const amtValue = form.downMode === 'amt' ? form.downAmt : result.downAmtText;
   const pctValue = form.downMode === 'pct' ? form.downPct : result.downPctText;
+
+  // COE: months left (null = no COE entered, so the tenure is left as the user set it).
+  const today = new Date();
+  const coeLeft = coeMonthsLeft(form, today);
+  const coeCheck = checkTenureVsCoe(result.tenure.months, coeLeft);
+  // A COE value change moves the tenure to the COE's default; a mode switch keeps the tenure.
+  const updateCoe = (patch: Partial<CarForm>) => update(applyCoePatch(form, patch, new Date()));
+  const setCoeMode = (mode: CoeMode) => update(switchCoeMode(form, mode, new Date()));
 
   return (
     <Card
@@ -64,6 +73,63 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
             </Field>
           </div>
           <p className="text-xs text-slate-500">{capText}</p>
+        </section>
+
+        <section className={GROUP}>
+          <SectionLabel>COE left</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              aria-pressed={form.coeMode === 'left'}
+              onClick={() => setCoeMode('left')}
+              className={presetClass}
+            >
+              Years + months left
+            </button>
+            <button
+              type="button"
+              aria-pressed={form.coeMode === 'expiry'}
+              onClick={() => setCoeMode('expiry')}
+              className={presetClass}
+            >
+              COE expiry date
+            </button>
+          </div>
+          {form.coeMode === 'left' ? (
+            <Field
+              label={<>COE left <span className="font-normal text-slate-400">(optional)</span></>}
+              hint={coeLeft === null ? 'Blank: no COE tracked, tenure stays as set.' : undefined}
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <NumInput
+                  value={form.coeYears}
+                  suffix="years"
+                  step="1"
+                  ariaLabel="COE years left"
+                  onChange={(coeYears) => updateCoe({ coeYears })}
+                />
+                <NumInput
+                  value={form.coeMonths}
+                  suffix="months"
+                  step="1"
+                  ariaLabel="COE extra months left"
+                  onChange={(coeMonths) => updateCoe({ coeMonths })}
+                />
+              </div>
+            </Field>
+          ) : (
+            <Field
+              label={<>COE expiry date <span className="font-normal text-slate-400">(optional)</span></>}
+              hint={coeLeft === null ? 'Blank: no COE tracked, tenure stays as set.' : undefined}
+            >
+              <input
+                type="date"
+                value={form.coeExpiry}
+                onChange={(e) => updateCoe({ coeExpiry: e.target.value })}
+                className={inputClass()}
+              />
+            </Field>
+          )}
         </section>
 
         <section className={GROUP}>
@@ -148,6 +214,25 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
               />
             </div>
           </Field>
+          {/* Always mounted so screen readers hear the note when the COE or tenure changes. */}
+          <div role="status" aria-live="polite" className={coeLeft === null ? 'sr-only' : undefined}>
+            {coeLeft !== null && (
+              <div
+                className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-3 py-2 text-[13px] ${
+                  coeCheck.overCoe ? 'border border-sat/20 bg-sat-bg text-sat' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                <span className="min-w-0 flex-1">{coeCheck.message}</span>
+                <button
+                  type="button"
+                  onClick={() => update({ ...splitMonths(defaultTenure(coeLeft)) })}
+                  className={`${btnOutline} min-h-11 px-3`}
+                >
+                  Match COE
+                </button>
+              </div>
+            )}
+          </div>
 
           <Field
             label={<>Interest rate <span className="font-normal text-slate-400">(% p.a., flat)</span></>}

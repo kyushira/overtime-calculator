@@ -133,6 +133,8 @@ describe('successful import', () => {
         omv: 33419,
         arf: 38787,
         coe: 33900,
+        // Time-left is relative to the real clock here, so only its shape is pinned (exact maths: sgcarmart.test.ts).
+        coeExpiry: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         mileage: 69030,
       },
       missing: [],
@@ -310,7 +312,7 @@ describe('upstream failures', () => {
       ok: false,
       error: 'upstream_error',
       fields: {},
-      missing: ['name', 'year', 'price', 'omv', 'arf', 'coe', 'mileage'],
+      missing: ['name', 'year', 'price', 'omv', 'arf', 'coe', 'coeExpiry', 'mileage'],
     });
   });
 });

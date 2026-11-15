@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { CarForm } from '../../utils/car';
+import { formatCoeLeft } from '../../utils/coe';
 import { savedCarFigures, showFullLoanRow, type SavedCarFigures } from '../../utils/carSaved';
 import { money, moneyWhole, num } from '../../utils/format';
 import type { SavedCar } from '../../utils/savedCars';
@@ -13,7 +14,8 @@ const NONE = '—';
 
 /** Side-by-side table for 2–3 saved cars. Scrolls sideways inside its container on phones. */
 export function CarCompare({ cars, form }: Props) {
-  const figs: SavedCarFigures[] = cars.map((c) => savedCarFigures(c, form));
+  const today = new Date();
+  const figs: SavedCarFigures[] = cars.map((c) => savedCarFigures(c, form, today));
   // Shared across columns: the table reads the same downpayment for every car.
   const downPct = figs[0]?.downPct ?? 0;
 
@@ -24,6 +26,19 @@ export function CarCompare({ cars, form }: Props) {
     { id: 'coe', label: 'COE', cell: (c) => (c.coe === undefined ? NONE : moneyWhole(c.coe)) },
     { id: 'year', label: 'Year', cell: (c) => (c.year === undefined ? NONE : String(c.year)) },
     { id: 'mileage', label: 'Mileage', cell: (c) => (c.mileage === undefined ? NONE : `${num(c.mileage, 0)} km`) },
+    {
+      id: 'coeLeft',
+      label: 'COE left',
+      cell: (_c, f) =>
+        f.coeLeft === null ? (
+          NONE
+        ) : (
+          <>
+            {formatCoeLeft(f.coeLeft)}
+            {f.tenureCapped && <span className="block text-[11px] font-normal text-sat">loan capped to COE</span>}
+          </>
+        ),
+    },
     {
       id: 'mas',
       label: 'MAS minimum down',

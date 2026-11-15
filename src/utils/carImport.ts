@@ -21,6 +21,7 @@ export interface ImportDraft {
   omv?: number;
   arf?: number;
   coe?: number;
+  coeExpiry?: string;
   year?: number;
   mileage?: number;
 }
@@ -30,6 +31,10 @@ export interface ImportDraft {
  * A listing without a price leaves the price alone (the import card says so). A listing without an
  * OMV clears the OMV: keeping the previous car's OMV would silently pick the wrong MAS cap. Blank
  * means the stricter 40% minimum, which the form already explains.
+ *
+ * COE follows the same rule. A listing with a COE expiry switches the form to 'expiry' mode and
+ * fills the date. A listing without one clears all COE inputs (back to 'left' mode, blank), so the
+ * previous car's COE time never carries over to this one.
  */
 export function importPatch(fields: ListingFields): Partial<CarForm> {
   const patch: Partial<CarForm> = {};
@@ -39,6 +44,15 @@ export function importPatch(fields: ListingFields): Partial<CarForm> {
     patch.downMode = 'pct';
   }
   patch.omv = fields.omv === undefined ? '' : String(fields.omv);
+  if (fields.coeExpiry !== undefined) {
+    patch.coeMode = 'expiry';
+    patch.coeExpiry = fields.coeExpiry;
+  } else {
+    patch.coeMode = 'left';
+    patch.coeYears = '';
+    patch.coeMonths = '';
+    patch.coeExpiry = '';
+  }
   return patch;
 }
 
@@ -66,6 +80,7 @@ export function draftFromListing(listing: ImportedListing): ImportDraft {
   if (f.omv !== undefined) draft.omv = f.omv;
   if (f.arf !== undefined) draft.arf = f.arf;
   if (f.coe !== undefined) draft.coe = f.coe;
+  if (f.coeExpiry !== undefined) draft.coeExpiry = f.coeExpiry;
   if (f.year !== undefined) draft.year = f.year;
   if (f.mileage !== undefined) draft.mileage = f.mileage;
   return draft;
@@ -78,8 +93,20 @@ const FIELD_LABEL: Record<ListingField, string> = {
   omv: 'OMV',
   arf: 'ARF',
   coe: 'COE',
+  coeExpiry: 'COE left',
   mileage: 'mileage',
 };
+
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "2029-03-12" -> "12 Mar 2029". Returns the input unchanged if it is not an ISO date. */
+export function formatCoeExpiry(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const month = Number(m[2]);
+  if (month < 1 || month > 12) return iso;
+  return `${Number(m[3])} ${MONTH_SHORT[month - 1]} ${m[1]}`;
+}
 
 export function fieldLabel(field: ListingField): string {
   return FIELD_LABEL[field];

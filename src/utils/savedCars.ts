@@ -1,3 +1,4 @@
+import { parseIsoDate } from './coe';
 import { isAllowedSgcarmartUrl } from './sgcarmart';
 
 /**
@@ -32,6 +33,8 @@ export interface SavedCar {
   mileage?: number;
   /** Downpayment as % of price when the car was saved. Absent on cars saved before it was recorded. */
   downPct?: number;
+  /** COE expiry, ISO 'YYYY-MM-DD'. A loan on this car can't outlast it. Absent when no COE was recorded. */
+  coeExpiry?: string;
   /** ISO-8601 timestamp. */
   savedAt: string;
 }
@@ -96,6 +99,7 @@ function cleanCar(raw: unknown): SavedCar | undefined {
   if (year !== undefined) car.year = year;
   if (mileage !== undefined) car.mileage = mileage;
   if (downPct !== undefined) car.downPct = downPct;
+  if (typeof r.coeExpiry === 'string' && parseIsoDate(r.coeExpiry) !== null) car.coeExpiry = r.coeExpiry;
   return car;
 }
 
