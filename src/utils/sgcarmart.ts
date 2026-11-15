@@ -25,25 +25,33 @@ export type ListingFields = Partial<{
 
 export type ListingParseResult = ListingFields & { missing: ListingField[] };
 
-const ALLOWED_HOST = 'sgcarmart.com';
+// Exactly these two hosts. Subdomains (m., img., …) are not on the list: each one is an extra
+// origin the proxy would fetch from, and none is needed to read a listing page.
+const ALLOWED_HOSTS: ReadonlySet<string> = new Set(['sgcarmart.com', 'www.sgcarmart.com']);
 const MAX_URL_LENGTH = 2048;
 const MAX_NAME_LENGTH = 200;
 // The WHATWG URL parser silently strips tabs/newlines inside a URL, so reject them
 // (and any other control or space character) before parsing.
 const CONTROL_OR_SPACE = /[\u0000-\u0020\u007f]/;
 
-/** True only for https URLs whose host is sgcarmart.com or a subdomain of it. */
+/** True only for https URLs whose host is exactly sgcarmart.com or www.sgcarmart.com. */
 export function isAllowedSgcarmartUrl(input: unknown): boolean {
   try {
     if (typeof input !== 'string' || input.length === 0 || input.length > MAX_URL_LENGTH) return false;
     if (CONTROL_OR_SPACE.test(input)) return false;
+    // WHATWG reads a backslash as '/' for https, so 'evil.com\.sgcarmart.com' would reach evil.com.
+    if (input.includes('\\')) return false;
     const url = new URL(input);
     if (url.protocol !== 'https:') return false;
     if (url.username !== '' || url.password !== '') return false;
     if (url.port !== '') return false; // only the default 443 (normalised to '')
+    // WHATWG percent-decodes the host, so 'www%2Esgcarmart.com' would parse as a listed host.
+    // Refuse any percent sign in the authority; a real sgcarmart URL never has one.
+    const authority = input.slice(input.indexOf('//') + 2).split(/[/?#]/, 1)[0];
+    if (authority.includes('%')) return false;
     const host = url.hostname;
     if (host.endsWith('.')) return false;
-    return host === ALLOWED_HOST || host.endsWith(`.${ALLOWED_HOST}`);
+    return ALLOWED_HOSTS.has(host);
   } catch {
     return false;
   }
@@ -53,14 +61,18 @@ export function isAllowedSgcarmartUrl(input: unknown): boolean {
 
 // "$$47,800" (RSC escapes "$" as "$$"), "S$47,800", "$33,419", "69,030 km (8.3k /yr)".
 // Must START with a number after the optional currency, so "COE till 07/2030" is rejected.
-const AMOUNT = /^\s*(?:S?\$+\s*)?(\d[\d,]*(?:\.\d+)?)/;
+// Comma groups must be exactly three digits, and the number must not run on into an exponent
+// ("1e5") or a stray comma or dot: such text is refused, not read as a shorter number.
+const AMOUNT = /^\s*(?:S?\$+\s*)?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?![eE][+-]?\d|[\d,.])/;
+/** Largest car price or running figure we accept (S$10m). Anything above is treated as a misread. */
+const MAX_AMOUNT = 10_000_000;
 
 function parseAmount(raw: string | undefined): number | undefined {
   if (!raw) return undefined;
   const m = AMOUNT.exec(raw);
   if (!m) return undefined;
   const n = Number(m[1].replace(/,/g, ''));
-  return Number.isFinite(n) && n >= 0 ? n : undefined;
+  return Number.isFinite(n) && n >= 0 && n <= MAX_AMOUNT ? n : undefined;
 }
 
 function parseYear(raw: string | number | undefined): number | undefined {
@@ -133,11 +145,44 @@ function payloadYear(payload: string, key: string): number | undefined {
   return parseYear(m?.[1]);
 }
 
+// Each <h1> is matched inside a bounded window, so hostile input (thousands of unclosed <h1>)
+// costs a fixed amount per candidate instead of a scan to the end of the page on every start.
+const H1_WINDOW = 4096;
+const H1_MAX_CANDIDATES = 32;
+const H1_TITLE = /^<h1\b[^>]{0,500}?class="[^"]{0,500}?title[^"]{0,500}"[^>]{0,500}>([\s\S]*?)<\/h1>/i;
+const H1_ANY = /^<h1\b[^>]{0,500}>([\s\S]*?)<\/h1>/i;
+
+function h1Candidates(html: string): string[] {
+  const open = /<h1\b/gi;
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while (out.length < H1_MAX_CANDIDATES && (m = open.exec(html)) !== null) {
+    out.push(html.slice(m.index, m.index + H1_WINDOW));
+  }
+  return out;
+}
+
+/** The class="…title…" heading if there is one, otherwise the first heading. */
 function h1Name(html: string): string | undefined {
-  const m =
-    /<h1\b[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i.exec(html) ??
-    /<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
-  return m ? cleanName(m[1]) : undefined;
+  const candidates = h1Candidates(html);
+  let inner: string | undefined;
+  for (const c of candidates) {
+    const m = H1_TITLE.exec(c);
+    if (m) {
+      inner = m[1];
+      break;
+    }
+  }
+  if (inner === undefined) {
+    for (const c of candidates) {
+      const m = H1_ANY.exec(c);
+      if (m) {
+        inner = m[1];
+        break;
+      }
+    }
+  }
+  return inner === undefined ? undefined : cleanName(inner);
 }
 
 /** Parses a saved sgcarmart listing page. Never throws. */

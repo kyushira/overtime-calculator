@@ -5,8 +5,14 @@ import hondaHtml from '../src/utils/__fixtures__/sgcarmart-honda-vezel-1551624.h
 
 const AUDI = 'https://www.sgcarmart.com/used-cars/info/audi-a4-20a-tfsi-1551328/';
 const HONDA = 'https://www.sgcarmart.com/used-cars/info/honda-vezel-15a-x-1551624/';
+// Never fetched earlier in the same test: a cache hit would skip the rate limiter.
+const FRESH = 'https://www.sgcarmart.com/used-cars/info/fresh-listing-1/';
 
 type Responder = (url: string, init?: RequestInit) => Promise<Response> | Response;
+interface Client {
+  remote?: string;
+  xff?: string;
+}
 
 function htmlResponse(body: string, status = 200): Response {
   return new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8' } });
@@ -29,12 +35,17 @@ function harness(responder: Responder, options: SgcarmartProxyOptions = {}) {
     advance: (ms: number) => {
       clock += ms;
     },
-    async get(url: string | undefined, method = 'GET', rawPath?: string) {
+    async get(url: string | undefined, method = 'GET', rawPath?: string, client: Client = {}) {
       const query = url === undefined ? '' : `?url=${encodeURIComponent(url)}`;
       const res = { statusCode: 200, headers: {} as Record<string, string>, body: '' };
       const next = vi.fn();
       await handler(
-        { method, url: rawPath ?? `/api/sgcarmart${query}` },
+        {
+          method,
+          url: rawPath ?? `/api/sgcarmart${query}`,
+          headers: client.xff === undefined ? {} : { 'x-forwarded-for': client.xff },
+          socket: { remoteAddress: client.remote },
+        },
         {
           get statusCode() {
             return res.statusCode;
@@ -272,6 +283,23 @@ describe('upstream failures', () => {
     expect(out.json.error).toBe('timeout');
   });
 
+  it('returns 504 when the body stalls after headers arrive and the timeout fires', async () => {
+    const h = harness(
+      (_url, init) => {
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            init?.signal?.addEventListener('abort', () => controller.error(new DOMException('aborted', 'AbortError')));
+          },
+        });
+        return new Response(body, { headers: { 'content-type': 'text/html' } });
+      },
+      { timeoutMs: 20 },
+    );
+    const out = await h.get(AUDI);
+    expect(out.status).toBe(504);
+    expect(out.json).toMatchObject({ ok: false, error: 'timeout' });
+  });
+
   it('returns a generic 502 on a network failure', async () => {
     const h = harness(() => {
       throw new TypeError('fetch failed: ECONNRESET at internal/detail');
@@ -307,6 +335,73 @@ describe('rate limit', () => {
     await h.get(AUDI);
     const hit = await h.get(AUDI);
     expect(hit.status).toBe(200);
+  });
+
+  it('one client being throttled does not 429 a different client', async () => {
+    const h = harness(() => htmlResponse(audiHtml), { minIntervalMs: 2000 });
+    await h.get(AUDI, 'GET', undefined, { remote: '198.51.100.1' });
+    const other = await h.get(HONDA, 'GET', undefined, { remote: '198.51.100.2' });
+    expect(other.status).toBe(200);
+    const same = await h.get(FRESH, 'GET', undefined, { remote: '198.51.100.1' });
+    expect(same.status).toBe(429);
+  });
+
+  it('ignores X-Forwarded-For from a non-loopback client (cannot be spoofed to dodge the limit)', async () => {
+    const h = harness(() => htmlResponse(audiHtml), { minIntervalMs: 2000 });
+    await h.get(AUDI, 'GET', undefined, { remote: '198.51.100.9', xff: '10.1.1.1' });
+    const spoofed = await h.get(FRESH, 'GET', undefined, { remote: '198.51.100.9', xff: '10.1.1.2' });
+    expect(spoofed.status).toBe(429);
+  });
+
+  it('uses the first X-Forwarded-For hop for a loopback tunnel, so tunnel clients are told apart', async () => {
+    const h = harness(() => htmlResponse(audiHtml), { minIntervalMs: 2000 });
+    await h.get(AUDI, 'GET', undefined, { remote: '127.0.0.1', xff: '203.0.113.1, 10.0.0.1' });
+    const second = await h.get(HONDA, 'GET', undefined, { remote: '127.0.0.1', xff: '203.0.113.2' });
+    expect(second.status).toBe(200);
+    const again = await h.get(FRESH, 'GET', undefined, { remote: '127.0.0.1', xff: '203.0.113.1' });
+    expect(again.status).toBe(429);
+  });
+
+  it('forgets the oldest client once the bounded client table is full', async () => {
+    const other = 'https://www.sgcarmart.com/used-cars/info/other/';
+    const h = harness((url) => htmlResponse(url === AUDI ? audiHtml : hondaHtml), {
+      minIntervalMs: 2000,
+      rateLimitMaxClients: 2,
+    });
+    await h.get(AUDI, 'GET', undefined, { remote: '10.0.0.1' });
+    await h.get(HONDA, 'GET', undefined, { remote: '10.0.0.2' });
+    await h.get(other, 'GET', undefined, { remote: '10.0.0.3' });
+    const evicted = await h.get(FRESH, 'GET', undefined, { remote: '10.0.0.1' });
+    expect(evicted.status).toBe(200);
+  });
+});
+
+describe('shared in-flight fetches and cache key', () => {
+  it('lets concurrent requests for the same listing share one upstream fetch instead of 429ing', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const h = harness(async () => {
+      await gate;
+      return htmlResponse(audiHtml);
+    }, { minIntervalMs: 2000 });
+    const first = h.get(AUDI);
+    const second = h.get(AUDI, 'GET', undefined, { remote: '198.51.100.5' });
+    release();
+    const [a, b] = await Promise.all([first, second]);
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200);
+    expect(h.fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('strips the URL fragment, so a #hash variant hits the same cache entry', async () => {
+    const h = harness(() => htmlResponse(audiHtml));
+    await h.get(AUDI);
+    const hashed = await h.get(`${AUDI}#gallery`);
+    expect(hashed.headers['x-cache']).toBe('HIT');
+    expect(h.fetchMock).toHaveBeenCalledTimes(1);
+    expect(h.fetchMock.mock.calls[0][0]).toBe(AUDI);
   });
 });
 

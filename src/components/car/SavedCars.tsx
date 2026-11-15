@@ -6,7 +6,7 @@ import type { ImportDraft } from '../../utils/carImport';
 import { currentDownPct, loadPatch, savedCarFigures } from '../../utils/carSaved';
 import { money, moneyWhole } from '../../utils/format';
 import { round2 } from '../../utils/payroll';
-import { addCar, loadCars, removeCar, saveCars, type SavedCar } from '../../utils/savedCars';
+import { MAX_SAVED_CARS, addCar, loadCars, removeCar, saveCars, type SavedCar } from '../../utils/savedCars';
 import { btnPrimary, Card, Field, inputClass } from '../ui';
 import { CarCompare } from './CarCompare';
 
@@ -51,10 +51,15 @@ export function SavedCars({ form, update, draft }: Props) {
   function onSave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!canSave) return;
+    if (cars.length >= MAX_SAVED_CARS) {
+      setMessage(`The list is full (${MAX_SAVED_CARS} cars). Delete one to save another.`);
+      return;
+    }
     const omv = form.omv.trim() === '' ? undefined : parseNum(form.omv);
     const input = {
       name: effectiveName,
       price,
+      downPct: round2(currentDownPct(form)),
       ...(omv !== undefined ? { omv } : {}),
       ...(draft?.link !== undefined ? { link: draft.link } : {}),
       ...(draft?.arf !== undefined ? { arf: draft.arf } : {}),
@@ -69,7 +74,11 @@ export function SavedCars({ form, update, draft }: Props) {
     }
     const persisted = commit(next);
     setName('');
-    setMessage(persisted ? `Saved ${effectiveName}.` : `Saved ${effectiveName} for this session only: browser storage is unavailable.`);
+    setMessage(
+      persisted
+        ? `Saved ${effectiveName}.`
+        : `Saved ${effectiveName} for this session only: browser storage could not be written (unavailable, full, or holding newer saved-car data).`,
+    );
   }
 
   function onLoad(car: SavedCar) {
@@ -151,7 +160,7 @@ export function SavedCars({ form, update, draft }: Props) {
       ) : (
         <>
           <p className="mt-3 text-xs text-slate-500">
-            Monthly figures use the {downPctText}% downpayment and tenure set on the calculator. Tap a car to load its price and OMV.
+            Monthly figures use the calculator&apos;s tenure and rate at the {downPctText}% downpayment set now. Tap a car to load its price and OMV.
           </p>
           <ul className="mt-2">
             {cars.map((car) => {
@@ -181,7 +190,11 @@ export function SavedCars({ form, update, draft }: Props) {
                     <span className="block truncate text-xs tabular-nums text-slate-500">
                       {loadable ? (
                         <>
-                          {moneyWhole(car.price!)} · {figs.monthly !== null ? money(figs.monthly) : NONE} a month
+                          {moneyWhole(car.price!)} · {figs.monthly !== null ? money(figs.monthly) : NONE} a month at{' '}
+                          {figs.downPct}% down
+                          {car.downPct !== undefined && Math.abs(car.downPct - figs.downPct) > 0.01
+                            ? ` (saved at ${car.downPct}%)`
+                            : ''}
                         </>
                       ) : (
                         'No price saved'

@@ -104,15 +104,19 @@ export function CarInputs({ form, update, result, otNet, onReset }: Props) {
               MAS minimum ({result.minDownPct}%)
             </button>
           </div>
-          {result.minDownWarning && (
-            <div role="status" className="flex gap-2 rounded-lg border border-sat/20 bg-sat-bg px-3 py-2 text-[13px] text-sat">
-              <TriangleAlert size={16} strokeWidth={1.5} aria-hidden className="mt-0.5 shrink-0" />
-              <span>
-                Above MAS loan limit, banks won&apos;t approve this. MAS minimum: {result.minDownPct}% down, at least{' '}
-                <b>{money(result.minDown)}</b> (max loan {moneyWhole(result.maxLoan)}).
-              </span>
-            </div>
-          )}
+          {/* The live region is always mounted so screen readers announce the notice when it appears.
+              It is visually hidden while there is no notice, so it leaves no empty amber box. */}
+          <div role="status" aria-live="polite" className={result.minDownWarning ? undefined : 'sr-only'}>
+            {result.minDownWarning && (
+              <div className="flex gap-2 rounded-lg border border-sat/20 bg-sat-bg px-3 py-2 text-[13px] text-sat">
+                <TriangleAlert size={16} strokeWidth={1.5} aria-hidden className="mt-0.5 shrink-0" />
+                <span>
+                  Above MAS loan limit, banks won&apos;t approve this. MAS minimum: {result.minDownPct}% down, at least{' '}
+                  <b>{money(result.minDown)}</b> (max loan {moneyWhole(result.maxLoan)}).
+                </span>
+              </div>
+            )}
+          </div>
           <div className="flex items-baseline justify-between gap-2 rounded-lg bg-slate-100 px-3 py-2.5 text-sm">
             <span className="text-slate-500">Loan amount</span>
             <b className="tabular-nums text-slate-900">{moneyWhole(result.loan)}</b>

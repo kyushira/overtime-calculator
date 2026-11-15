@@ -26,9 +26,12 @@ const DEFAULTS = {
   maxBytes: 2 * 1024 * 1024,
   maxRedirects: 3,
   minIntervalMs: 2_000,
+  rateLimitMaxClients: 500,
   cacheTtlMs: 10 * 60_000,
   cacheMaxEntries: 50,
 } as const;
+
+const LOOPBACK = /^(?:127\.|::1$|::ffff:127\.)/;
 
 // A realistic browser UA: sgcarmart serves a reduced page to unknown clients.
 const USER_AGENT =
@@ -42,6 +45,7 @@ export interface SgcarmartProxyOptions {
   maxBytes?: number;
   maxRedirects?: number;
   minIntervalMs?: number;
+  rateLimitMaxClients?: number;
   cacheTtlMs?: number;
   cacheMaxEntries?: number;
 }
@@ -50,6 +54,8 @@ export interface SgcarmartProxyOptions {
 export interface ProxyRequest {
   method?: string;
   url?: string;
+  headers?: Record<string, string | string[] | undefined>;
+  socket?: { remoteAddress?: string };
 }
 export interface ProxyResponse {
   statusCode: number;
@@ -126,6 +132,27 @@ async function readCapped(res: Response, maxBytes: number): Promise<Uint8Array> 
   return bytes;
 }
 
+/**
+ * Who is asking, for rate-limiting. The socket address, and for a loopback peer (a local tunnel
+ * such as cloudflared, which makes every visitor look like 127.0.0.1) the first X-Forwarded-For hop.
+ * A non-loopback peer's forwarded header is ignored, so it cannot choose its own bucket.
+ * Note: that first hop is set by the client, so through a tunnel it is a fairness key, not an identity.
+ */
+function clientKey(req: ProxyRequest): string {
+  const remote = req.socket?.remoteAddress ?? '';
+  if (!LOOPBACK.test(remote)) return remote;
+  const xff = req.headers?.['x-forwarded-for'];
+  const first = (Array.isArray(xff) ? xff[0] : xff)?.split(',')[0]?.trim().slice(0, 64);
+  return first ? `${remote}|${first}` : remote;
+}
+
+/** Cache key for a target: the URL without its fragment, which never reaches the server anyway. */
+function cacheKeyFor(target: string): string {
+  const url = new URL(target);
+  url.hash = '';
+  return url.href;
+}
+
 export function createSgcarmartHandler(options: SgcarmartProxyOptions = {}): ProxyHandler {
   // Wrapped, not passed bare: calling a detached `fetch` throws "Illegal invocation" in browsers.
   const fetchImpl: typeof fetch = options.fetchImpl ?? ((input, init) => fetch(input, init));
@@ -134,12 +161,26 @@ export function createSgcarmartHandler(options: SgcarmartProxyOptions = {}): Pro
   const maxBytes = options.maxBytes ?? DEFAULTS.maxBytes;
   const maxRedirects = options.maxRedirects ?? DEFAULTS.maxRedirects;
   const minIntervalMs = options.minIntervalMs ?? DEFAULTS.minIntervalMs;
+  const rateLimitMaxClients = options.rateLimitMaxClients ?? DEFAULTS.rateLimitMaxClients;
   const cacheTtlMs = options.cacheTtlMs ?? DEFAULTS.cacheTtlMs;
   const cacheMaxEntries = options.cacheMaxEntries ?? DEFAULTS.cacheMaxEntries;
 
   // Insertion-ordered: the first key is the oldest entry, evicted first.
   const cache = new Map<string, { expiresAt: number; body: SuccessBody }>();
-  let lastUpstreamAt: number | undefined;
+  // Last upstream fetch per client, most recent last. Bounded: the oldest client is forgotten first.
+  const lastUpstreamByClient = new Map<string, number>();
+  // Upstream fetches in progress, by cache key. A duplicate request awaits the same fetch.
+  const inFlight = new Map<string, Promise<SuccessBody>>();
+
+  function rememberClient(client: string, t: number): void {
+    lastUpstreamByClient.delete(client);
+    lastUpstreamByClient.set(client, t);
+    while (lastUpstreamByClient.size > rateLimitMaxClients) {
+      const oldest = lastUpstreamByClient.keys().next().value;
+      if (oldest === undefined) break;
+      lastUpstreamByClient.delete(oldest);
+    }
+  }
 
   function cacheGet(key: string): SuccessBody | undefined {
     const hit = cache.get(key);
@@ -267,7 +308,7 @@ export function createSgcarmartHandler(options: SgcarmartProxyOptions = {}): Pro
         fail(res, 400, 'invalid_url');
         return;
       }
-      const key = new URL(target).href;
+      const key = cacheKeyFor(target);
 
       const cached = cacheGet(key);
       if (cached) {
@@ -275,17 +316,33 @@ export function createSgcarmartHandler(options: SgcarmartProxyOptions = {}): Pro
         return;
       }
 
+      // Same listing already being fetched: wait for that fetch rather than starting another or refusing.
+      const pending = inFlight.get(key);
+      if (pending) {
+        send(res, 200, await pending, { 'X-Cache': 'SHARED' });
+        return;
+      }
+
+      const client = clientKey(req);
       const t = now();
-      if (lastUpstreamAt !== undefined && t - lastUpstreamAt < minIntervalMs) {
-        const retryAfter = Math.max(1, Math.ceil((minIntervalMs - (t - lastUpstreamAt)) / 1000));
+      const last = lastUpstreamByClient.get(client);
+      if (last !== undefined && t - last < minIntervalMs) {
+        const retryAfter = Math.max(1, Math.ceil((minIntervalMs - (t - last)) / 1000));
         fail(res, 429, 'rate_limited', { 'Retry-After': String(retryAfter) });
         return;
       }
-      lastUpstreamAt = t;
+      rememberClient(client, t);
 
-      const body = await fetchListing(key);
-      cacheSet(key, body);
-      send(res, 200, body, { 'X-Cache': 'MISS' });
+      const started = fetchListing(key)
+        .then((body) => {
+          cacheSet(key, body);
+          return body;
+        })
+        .finally(() => {
+          inFlight.delete(key);
+        });
+      inFlight.set(key, started);
+      send(res, 200, await started, { 'X-Cache': 'MISS' });
     } catch (err) {
       if (err instanceof ProxyError) {
         fail(res, err.status, err.code, {}, err.upstreamStatus);

@@ -7,8 +7,8 @@ describe('isAllowedSgcarmartUrl', () => {
   it.each([
     'https://www.sgcarmart.com/used-cars/info/audi-a4-20a-tfsi-1551328/',
     'https://sgcarmart.com/used-cars/listing',
-    'https://m.sgcarmart.com/used-cars/info/honda-vezel-15a-x-1551624/',
     'https://WWW.SGCARMART.COM/used-cars/listing',
+    'https://sgcarmart.com/used-cars/info/audi-a4-20a-tfsi-1551328/',
     'https://www.sgcarmart.com:443/used-cars/listing',
   ])('accepts %s', (url) => {
     expect(isAllowedSgcarmartUrl(url)).toBe(true);
@@ -71,6 +71,65 @@ describe('isAllowedSgcarmartUrl', () => {
 
   it.each([null, undefined, 42, {}, [], true])('rejects non-string %j without throwing', (value) => {
     expect(isAllowedSgcarmartUrl(value)).toBe(false);
+  });
+
+  it.each([
+    // only the two exact hosts: no other subdomains, not even m.
+    'https://m.sgcarmart.com/used-cars/info/honda-vezel-15a-x-1551624/',
+    'https://evil.sgcarmart.com/',
+    'https://img.sgcarmart.com/x.jpg',
+    // backslash: WHATWG reads it as '/', so 'evil.com\\.sgcarmart.com' would reach evil.com
+    'https://evil.com\\.sgcarmart.com/',
+    'https://www.sgcarmart.com\\@evil.com/',
+    'https://www.sgcarmart.com\\evil.com/',
+    // percent-encoded host: WHATWG decodes it, so the literal text must be refused
+    'https://www%2Esgcarmart.com/used-cars/listing',
+    'https://sgcarmart%2Ecom/',
+    'https://%77ww.sgcarmart.com/',
+    'https://evil.com%2F.sgcarmart.com/',
+  ])('rejects host or encoding trick %j', (url) => {
+    expect(isAllowedSgcarmartUrl(url)).toBe(false);
+  });
+});
+
+describe('listing amounts', () => {
+  const priceOf = (value: string) => parseListingText(`Price: ${value}`).price;
+
+  it.each(['1e5', '1.5E3', '2e+4'])('rejects exponent form %s', (value) => {
+    expect(priceOf(value)).toBeUndefined();
+  });
+
+  it.each(['12,34', '1,2,3', '1234,567', '1,000,0000'])('rejects misplaced comma groups in %s', (value) => {
+    expect(priceOf(value)).toBeUndefined();
+  });
+
+  it.each(['10,000,001', '99,999,999', '1000000000000'])('rejects values above ten million: %s', (value) => {
+    expect(priceOf(value)).toBeUndefined();
+  });
+
+  it.each([
+    ['$10,000,000', 10_000_000],
+    ['S$1,000,000', 1_000_000],
+    ['$47,800', 47_800],
+    ['$47,800.50', 47_800.5],
+  ])('accepts %s', (value, expected) => {
+    expect(priceOf(value)).toBe(expected);
+  });
+});
+
+describe('h1 parsing cost', () => {
+  it('parses 2 MB of repeated <h1> in under 500 ms', () => {
+    const html = '<h1>'.repeat((2 * 1024 * 1024) / 4);
+    const started = performance.now();
+    parseListingHtml(html);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
+  it('parses 2 MB of unclosed title <h1> in under 500 ms', () => {
+    const html = '<h1 class="title">x'.repeat((2 * 1024 * 1024) / 19);
+    const started = performance.now();
+    parseListingHtml(html);
+    expect(performance.now() - started).toBeLessThan(500);
   });
 });
 

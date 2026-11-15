@@ -4,12 +4,16 @@ import { isAllowedSgcarmartUrl } from './sgcarmart';
  * Saved-cars storage for the car calculator, persisted as one versioned localStorage document.
  *
  * Every read is sanitised through migrate(): a corrupt or hand-edited value never reaches the UI
- * as anything but a list of well-formed cars. Documents with a version this code does not know are
- * treated as empty rather than guessed at.
+ * as anything but a list of well-formed cars. A document with a version this code does not know
+ * reads as an empty list, but it is never overwritten silently: its raw text is copied to
+ * SAVED_CARS_BACKUP_KEY before the first write, and a write that cannot keep it is refused.
  */
 
 export const SAVED_CARS_KEY = 'carcalc.cars.v1';
+export const SAVED_CARS_BACKUP_KEY = 'carcalc.cars.backup';
 export const SAVED_CARS_VERSION = 1;
+/** Upper bound on the list. A full list refuses new cars rather than dropping old ones. */
+export const MAX_SAVED_CARS = 200;
 
 const MAX_NAME_LENGTH = 200;
 const MIN_YEAR = 1900;
@@ -18,7 +22,7 @@ const MAX_YEAR = 2100;
 export interface SavedCar {
   id: string;
   name: string;
-  /** Only ever an allow-listed sgcarmart URL, or absent. */
+  /** Only ever an allow-listed sgcarmart URL, in normalised (`URL.href`) form, or absent. */
   link?: string;
   price?: number;
   omv?: number;
@@ -26,6 +30,8 @@ export interface SavedCar {
   coe?: number;
   year?: number;
   mileage?: number;
+  /** Downpayment as % of price when the car was saved. Absent on cars saved before it was recorded. */
+  downPct?: number;
   /** ISO-8601 timestamp. */
   savedAt: string;
 }
@@ -75,25 +81,39 @@ function cleanCar(raw: unknown): SavedCar | undefined {
       ? r.savedAt
       : new Date(0).toISOString();
   const car: SavedCar = { id, name, savedAt };
-  if (typeof r.link === 'string' && isAllowedSgcarmartUrl(r.link)) car.link = r.link;
+  if (typeof r.link === 'string' && isAllowedSgcarmartUrl(r.link)) car.link = normaliseLink(r.link);
   const price = cleanNumber(r.price, 0);
   const omv = cleanNumber(r.omv, 0);
   const arf = cleanNumber(r.arf, 0);
   const coe = cleanNumber(r.coe, 0);
   const year = cleanNumber(r.year, MIN_YEAR, MAX_YEAR);
   const mileage = cleanNumber(r.mileage, 0);
+  const downPct = cleanNumber(r.downPct, 0, 100);
   if (price !== undefined) car.price = price;
   if (omv !== undefined) car.omv = omv;
   if (arf !== undefined) car.arf = arf;
   if (coe !== undefined) car.coe = coe;
   if (year !== undefined) car.year = year;
   if (mileage !== undefined) car.mileage = mileage;
+  if (downPct !== undefined) car.downPct = downPct;
   return car;
+}
+
+/** The one spelling a listing link is stored and compared in. Only called on allow-listed URLs. */
+function normaliseLink(link: string): string {
+  return new URL(link).href;
+}
+
+function isUnknownVersion(parsed: unknown): boolean {
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return false;
+  const version = (parsed as Record<string, unknown>).version;
+  return version !== undefined && version !== SAVED_CARS_VERSION;
 }
 
 /**
  * Normalises any value into a valid v1 document. Accepts the current versioned shape or a bare
  * array of cars (the unversioned form). Unknown versions and unrecognised input become an empty list.
+ * The list is capped at MAX_SAVED_CARS.
  */
 export function migrate(raw: unknown): SavedCarsDocument {
   let list: unknown;
@@ -107,6 +127,7 @@ export function migrate(raw: unknown): SavedCarsDocument {
   if (!Array.isArray(list)) return { version: SAVED_CARS_VERSION, cars: [] };
   const cars: SavedCar[] = [];
   for (const item of list) {
+    if (cars.length >= MAX_SAVED_CARS) break;
     const car = cleanCar(item);
     if (car) cars.push(car);
   }
@@ -125,10 +146,37 @@ export function loadCars(storage: StorageLike | undefined = defaultStorage()): S
   }
 }
 
-/** Writes the cars as a v1 document. Returns false if storage is unavailable or full. */
+/**
+ * Keeps a newer-version document before a write replaces it. Its raw text goes to the backup key
+ * the first time. A backup already holding different text is never overwritten, so the write is
+ * refused instead. Returns false when the original cannot be kept.
+ */
+function preserveUnknownDocument(storage: StorageLike): boolean {
+  const raw = storage.getItem(SAVED_CARS_KEY);
+  if (raw === null) return true;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return true;
+  }
+  if (!isUnknownVersion(parsed)) return true;
+  const backup = storage.getItem(SAVED_CARS_BACKUP_KEY);
+  if (backup === null) {
+    storage.setItem(SAVED_CARS_BACKUP_KEY, raw);
+    return true;
+  }
+  return backup === raw;
+}
+
+/**
+ * Writes the cars as a v1 document. Returns false if storage is unavailable or full, or if it holds
+ * a newer-version document that could not be kept (see preserveUnknownDocument).
+ */
 export function saveCars(cars: SavedCar[], storage: StorageLike | undefined = defaultStorage()): boolean {
   if (!storage) return false;
   try {
+    if (!preserveUnknownDocument(storage)) return false;
     const doc = migrate({ version: SAVED_CARS_VERSION, cars });
     storage.setItem(SAVED_CARS_KEY, JSON.stringify(doc));
     return true;
@@ -139,10 +187,11 @@ export function saveCars(cars: SavedCar[], storage: StorageLike | undefined = de
 
 /**
  * Returns a new list with the car appended. A car whose link is already saved is not added again,
- * so the list is returned unchanged.
+ * and a full list (MAX_SAVED_CARS) takes no more. In both cases the list is returned unchanged.
  */
 export function addCar(cars: SavedCar[], input: SavedCarInput, options: AddCarOptions = {}): SavedCar[] {
-  const link = input.link !== undefined && isAllowedSgcarmartUrl(input.link) ? input.link : undefined;
+  if (cars.length >= MAX_SAVED_CARS) return cars;
+  const link = input.link !== undefined && isAllowedSgcarmartUrl(input.link) ? normaliseLink(input.link) : undefined;
   if (link !== undefined && cars.some((c) => c.link === link)) return cars;
   const candidate = cleanCar({
     ...input,
