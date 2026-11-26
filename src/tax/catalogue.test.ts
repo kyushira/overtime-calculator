@@ -316,6 +316,21 @@ describe('RELIEF_CATALOGUE', () => {
     expect(RELIEF_CATALOGUE.cpfCashTopUp.label).toBe('CPF Cash Top-up');
   });
 
+  it('cpf blurb does not claim voluntary MediSave under Employee CPF relief', () => {
+    expect(RELIEF_CATALOGUE.cpf.blurb).not.toMatch(/medisave/i);
+  });
+
+  it('cpf blurb points voluntary top-ups to CPF Cash Top-up Relief', () => {
+    expect(RELIEF_CATALOGUE.cpf.blurb).toMatch(/CPF Cash Top-up Relief/);
+  });
+
+  it('cash top-up blurb covers voluntary MediSave and the $8,000 + $8,000 caps', () => {
+    const blurb = RELIEF_CATALOGUE.cpfCashTopUp.blurb;
+    expect(blurb).toMatch(/MediSave/);
+    expect(blurb).toMatch(/\$8,000/);
+    expect(blurb).toMatch(/\$16,000/);
+  });
+
   it('sets unit labels and bounds only for unit-based reliefs', () => {
     expect(RELIEF_CATALOGUE.nsmanParent).toMatchObject({ unitLabel: 'parents', maxUnits: 2 });
     expect(RELIEF_CATALOGUE.parent).toMatchObject({ unitLabel: 'dependants', maxUnits: 2 });

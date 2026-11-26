@@ -98,7 +98,8 @@ export const RELIEF_CATALOGUE: Record<ReliefId, ReliefMeta> = {
   cpf: {
     id: 'cpf',
     label: 'CPF Relief',
-    blurb: 'Your employee CPF contributions, plus any voluntary MediSave.',
+    blurb:
+      'Your compulsory employee CPF contributions on wages. Voluntary top-ups are claimed under CPF Cash Top-up Relief instead.',
     capIsUpperBound: true,
     autoSuggest: true,
   },
@@ -186,7 +187,8 @@ export const RELIEF_CATALOGUE: Record<ReliefId, ReliefMeta> = {
   cpfCashTopUp: {
     id: 'cpfCashTopUp',
     label: 'CPF Cash Top-up',
-    blurb: 'Cash top-ups to your own or family members\u2019 CPF.',
+    blurb:
+      'Cash top-ups to your own or family members’ CPF, including voluntary MediSave. Up to $8,000 for self and $8,000 for family, $16,000 in total.',
     capIsUpperBound: true,
     autoSuggest: false,
   },
