@@ -17,14 +17,15 @@ describe('HOME_MODULES', () => {
     ]);
   });
 
-  it('has exactly three active modules, with routes /pay, /car, /tax', () => {
+  it('has exactly five active modules, with routes in list order', () => {
     const active = HOME_MODULES.filter((m) => m.status === 'active');
-    expect(active.map((m) => m.href)).toEqual(['/pay', '/car', '/tax']);
+    expect(active.map((m) => m.href)).toEqual(['/pay', '/car', '/tax', '/savings', '/subscriptions']);
   });
 
   it('gives every coming-soon module a null href', () => {
     const soon = HOME_MODULES.filter((m) => m.status === 'soon');
-    expect(soon).toHaveLength(7);
+    expect(soon).toHaveLength(5);
+    expect(soon.map((m) => m.id)).toEqual(['loans', 'sinking', 'credit-card', 'health', 'receipts']);
     for (const m of soon) expect(m.href).toBeNull();
   });
 

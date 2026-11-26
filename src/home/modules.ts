@@ -31,11 +31,11 @@ export const HOME_MODULES: readonly HomeModule[] = [
   { id: 'pay', title: 'Salary & OT', subtitle: 'Overtime, shift & CPF', href: '/pay', status: 'active', icon: 'Wallet' },
   { id: 'car', title: 'My Car', subtitle: 'COE, loan & sgcarmart', href: '/car', status: 'active', icon: 'Car' },
   { id: 'tax', title: 'Tax Claim', subtitle: 'Reliefs & tax savings', href: '/tax', status: 'active', icon: 'FileText' },
-  { id: 'savings', title: 'Savings', subtitle: 'Accounts & net worth', href: null, status: 'soon', icon: 'PiggyBank' },
+  { id: 'savings', title: 'Savings', subtitle: 'Accounts & net worth', href: '/savings', status: 'active', icon: 'PiggyBank' },
   { id: 'loans', title: 'Loans', subtitle: 'Track balances & payoff', href: null, status: 'soon', icon: 'Landmark' },
   { id: 'sinking', title: 'Sinking Funds', subtitle: 'Future expense reserves', href: null, status: 'soon', icon: 'Layers' },
   { id: 'credit-card', title: 'Credit Card', subtitle: 'Log usage & payments', href: null, status: 'soon', icon: 'CreditCard' },
-  { id: 'subscriptions', title: 'Subscriptions', subtitle: 'Active plans & cards used', href: null, status: 'soon', icon: 'Repeat' },
+  { id: 'subscriptions', title: 'Subscriptions', subtitle: 'Active plans & cards used', href: '/subscriptions', status: 'active', icon: 'Repeat' },
   { id: 'health', title: 'Health', subtitle: 'Checkups, insurance & certificates', href: null, status: 'soon', icon: 'HeartPulse' },
   { id: 'receipts', title: 'Receipt Tracker', subtitle: 'Scan & store receipts', href: null, status: 'soon', icon: 'ScanLine' },
 ];
