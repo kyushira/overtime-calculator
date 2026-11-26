@@ -106,6 +106,24 @@ describe('buildTaxView totals and cap', () => {
     expect(view.result).toEqual(direct);
   });
 
+  it('totalShare is claimed over the overall cap, clamped to 0..1', () => {
+    expect(buildTaxView(defaultTaxState()).totalShare).toBe(0);
+    const view = buildTaxView(stateWith({ spouse: { amount: 2000 } }));
+    expect(view.totalShare).toBeCloseTo(2000 / PERSONAL_RELIEF_CAP, 10);
+    const over = buildTaxView(
+      stateWith({ parent: { units: 2, amount: 28000, tier: 'staysWithDisability' }, qcr: { units: 10, amount: 40000 }, hcr: { units: 1, amount: 7500 }, spouse: { amount: 5500, tier: 'disability' } }),
+    );
+    expect(over.totalShare).toBe(1);
+  });
+
+  it('row.entered is the typed amount before clamping', () => {
+    expect(rowOf(buildTaxView(stateWith({ cpf: { amount: 999999 } })), 'cpf')).toMatchObject({
+      entered: 999999,
+      claimed: expect.any(Number),
+    });
+    expect(rowOf(buildTaxView(defaultTaxState()), 'cpf').entered).toBeNull();
+  });
+
   it('effectiveRate is 0 with no income and netTaxPayable / totalIncome otherwise', () => {
     expect(buildTaxView(defaultTaxState()).effectiveRate).toBe(0);
     const view = buildTaxView(stateWith({}, { employmentIncome: 90000, bonus: 20000 }));

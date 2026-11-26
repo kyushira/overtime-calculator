@@ -59,6 +59,8 @@ export interface TaxRow {
   suggested: number;
   /** Amount counted toward the total: 0 when ineligible or unavailable. */
   claimed: number;
+  /** The amount as typed (before clamping), or null for "use the suggestion". */
+  entered: number | null;
   /** true when `claimed` came from the suggestion rather than a typed amount. */
   isSuggested: boolean;
   units: number;
@@ -82,6 +84,8 @@ export interface TaxView {
   totalClaimed: number;
   overallCap: number;
   capReached: boolean;
+  /** totalClaimed / overallCap, clamped to 0..1, for the progress bar. */
+  totalShare: number;
   result: TaxResult;
   /** netTaxPayable / totalIncome, 0 when there is no income. */
   effectiveRate: number;
@@ -194,6 +198,7 @@ export function buildTaxView(state: TaxState): TaxView {
       cap,
       suggested,
       claimed: value,
+      entered: amount,
       isSuggested: eligible && available && meta.autoSuggest && amount === null,
       units: units[id] ?? 0,
       tiers: [...tierList],
@@ -225,6 +230,7 @@ export function buildTaxView(state: TaxState): TaxView {
     totalClaimed,
     overallCap: PERSONAL_RELIEF_CAP,
     capReached: totalClaimed >= PERSONAL_RELIEF_CAP,
+    totalShare: Math.min(1, Math.max(0, totalClaimed / PERSONAL_RELIEF_CAP)),
     result,
     effectiveRate,
     reminders,
