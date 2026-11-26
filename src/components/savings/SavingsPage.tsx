@@ -1,8 +1,6 @@
-import { ChevronLeft, Plus } from 'lucide-react';
-import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { useTheme } from '../../hooks/useTheme';
 import {
   accountFromDraft,
   draftFrom,
@@ -17,14 +15,10 @@ import {
   type SavingsState,
 } from '../../savings/savingsModel';
 import { money } from '../../utils/format';
-import { ThemeToggle } from '../ThemeToggle';
+import { ModuleHeader } from '../ModuleHeader';
 import { btnPrimary, Card } from '../ui';
 import { AccountForm } from './AccountForm';
 import { AccountRow } from './AccountRow';
-
-/** Same header control as the pay/car/tax shell (App.tsx). */
-const HEADER_BTN =
-  'grid min-h-11 min-w-11 shrink-0 place-items-center rounded-lg transition duration-150 ease-out hover:bg-slate-100 hover:text-slate-900 active:scale-95';
 
 /** null = list only; add = blank form; edit = form pre-filled for one account. */
 type Editing = { mode: 'add' } | { mode: 'edit'; id: string } | null;
@@ -32,7 +26,6 @@ type Editing = { mode: 'add' } | { mode: 'edit'; id: string } | null;
 /** Savings module: net worth hero, account list, add/edit form, inline delete confirm. */
 export function SavingsPage() {
   const [state, setState] = useLocalStorage<SavingsState>(SAVINGS_STORAGE_KEY, emptySavings(), parseSavings);
-  const theme = useTheme();
   const [editing, setEditing] = useState<Editing>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const accounts = state.accounts;
@@ -63,21 +56,7 @@ export function SavingsPage() {
 
   return (
     <div className="app-bg min-h-screen bg-page text-slate-900">
-      <header className="border-b border-slate-200 bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-2.5 sm:px-6">
-          <Link href="/" aria-label="Home" title="Home" className={`${HEADER_BTN} text-slate-500`}>
-            <ChevronLeft size={22} strokeWidth={1.75} aria-hidden />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <h1 id="view-title" className="truncate text-[15px] font-semibold text-slate-900 lg:text-lg">
-              Savings
-            </h1>
-          </div>
-          <div className="flex shrink-0 items-center">
-            <ThemeToggle pref={theme.pref} onCycle={theme.cyclePref} />
-          </div>
-        </div>
-      </header>
+      <ModuleHeader title="Savings" />
 
       <main aria-labelledby="view-title" className="mx-auto max-w-2xl space-y-4 overflow-x-clip px-3 pt-4 pb-10 sm:px-6 sm:pt-6">
         <section aria-label="Net worth" className="rounded-xl bg-tile-mint p-5 shadow-[var(--shadow-glow-mint)] sm:p-6">
