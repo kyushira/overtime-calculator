@@ -5,7 +5,7 @@ import type { Tab } from '../../hooks/useTab';
  * from tab id to mode / summary variant can be unit-tested.
  */
 
-export type Mode = 'pay' | 'car';
+export type Mode = 'pay' | 'car' | 'tax';
 
 /** Tabs shown in the Pay-mode bottom bar (Settings is reached from the header gear). */
 export const BAR_TABS = ['calculator', 'breakdown', 'target', 'months'] as const;
@@ -14,7 +14,9 @@ export type BarTab = (typeof BAR_TABS)[number];
 export type SummaryVariant = 'full' | 'strip' | 'none';
 
 export function modeOf(tab: Tab): Mode {
-  return tab === 'car' ? 'car' : 'pay';
+  if (tab === 'car') return 'car';
+  if (tab === 'tax') return 'tax';
+  return 'pay';
 }
 
 export function isBarTab(tab: Tab): tab is BarTab {
@@ -34,7 +36,7 @@ export function parseBarTab(raw: unknown): BarTab {
 /**
  * Which summary sits under the header:
  * calculator = full 2x2 grid (collapses on scroll), other pay tabs = collapsed strip,
- * settings and car = none.
+ * settings, car and tax = none.
  */
 export function summaryVariant(tab: Tab): SummaryVariant {
   if (tab === 'calculator') return 'full';

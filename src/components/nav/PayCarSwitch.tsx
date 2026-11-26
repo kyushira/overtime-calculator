@@ -1,10 +1,11 @@
 import type { Mode } from './navModel';
 
-/** Segmented Pay | Car switch in the header. Each option is a 44px button with aria-pressed. */
+/** Segmented Pay | Car | Tax switch in the header. Each option is a 44px button with aria-pressed. */
 export function PayCarSwitch({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
   const options: { id: Mode; label: string }[] = [
     { id: 'pay', label: 'Pay' },
     { id: 'car', label: 'Car' },
+    { id: 'tax', label: 'Tax' },
   ];
   return (
     <div role="group" aria-label="App mode" className="flex shrink-0 rounded-lg border border-slate-200 bg-page p-0.5">

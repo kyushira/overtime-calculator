@@ -1,4 +1,4 @@
-import { Calculator, Car, CalendarRange, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
+import { Calculator, Car, CalendarRange, Landmark, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Breakdown } from './components/Breakdown';
 import { CarCalculator } from './components/CarCalculator';
@@ -8,6 +8,7 @@ import { MonthsTab } from './components/MonthsTab';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SummaryCards } from './components/SummaryCards';
 import { TargetMode } from './components/TargetMode';
+import { TaxTab } from './components/tax/TaxTab';
 import { btnOutline, SectionLabel } from './components/ui';
 import { AppearanceCard } from './components/AppearanceCard';
 import { PrivacyToggle } from './components/PrivacyToggle';
@@ -54,6 +55,7 @@ const TAB_ITEMS: { id: Tab; label: string; icon: LucideIcon; blurb: string }[] =
   { id: 'months', label: 'Months', icon: CalendarRange, blurb: 'Save each month, see your history and plan the next one' },
   { id: 'settings', label: 'Settings', icon: Settings, blurb: 'Pay rules, CPF and deductions' },
   { id: 'car', label: 'Car', icon: Car, blurb: 'Car loan, running costs and affordability' },
+  { id: 'tax', label: 'Tax', icon: Landmark, blurb: 'Income tax estimate, reliefs and year-end reminders' },
 ];
 
 /** Pay-mode tabs shown in the bottom bar and the sidebar list (Settings is the header gear). */
@@ -109,7 +111,7 @@ export default function App() {
     window.scrollTo({ top: 0 });
   };
 
-  const switchMode = (m: Mode) => goTo(m === 'car' ? 'car' : lastPay);
+  const switchMode = (m: Mode) => goTo(m === 'pay' ? lastPay : m);
 
   const applyCombo = (q: OtQuantities) => {
     update({
@@ -177,6 +179,17 @@ export default function App() {
           >
             <Car {...ICON} aria-hidden />
             Car
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo('tax')}
+            aria-current={mode === 'tax' ? 'page' : undefined}
+            className={`mt-1 flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
+              mode === 'tax' ? 'text-accent' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Landmark {...ICON} aria-hidden />
+            Tax
           </button>
         </nav>
 
@@ -322,8 +335,9 @@ export default function App() {
             )}
 
             {tab === 'car' && <CarCalculator otNet={result.net} />}
+            {tab === 'tax' && <TaxTab />}
 
-            {tab !== 'car' && (
+            {tab !== 'car' && tab !== 'tax' && (
               <p className="pt-2 text-center text-xs text-slate-400">
                 Estimates only. Unpaid leave and age-based CPF rate changes are not modelled automatically.
               </p>

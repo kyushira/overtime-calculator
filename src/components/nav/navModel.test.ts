@@ -3,9 +3,10 @@ import { BAR_TABS, isBarTab, modeOf, nextLastPayTab, parseBarTab, summaryVariant
 import { parseTab, TABS } from '../../hooks/useTab';
 
 describe('modeOf', () => {
-  it('car is its own mode; every other tab (including settings) is pay mode', () => {
+  it('car and tax are their own modes; every other tab (including settings) is pay mode', () => {
     expect(modeOf('car')).toBe('car');
-    for (const t of TABS.filter((t) => t !== 'car')) expect(modeOf(t)).toBe('pay');
+    expect(modeOf('tax')).toBe('tax');
+    for (const t of TABS.filter((t) => t !== 'car' && t !== 'tax')) expect(modeOf(t)).toBe('pay');
   });
 });
 
@@ -23,6 +24,7 @@ describe('nextLastPayTab', () => {
     expect(nextLastPayTab('target', 'calculator')).toBe('target');
     expect(nextLastPayTab('settings', 'months')).toBe('months');
     expect(nextLastPayTab('car', 'breakdown')).toBe('breakdown');
+    expect(nextLastPayTab('tax', 'months')).toBe('months');
   });
 });
 
@@ -44,6 +46,7 @@ describe('summaryVariant', () => {
     expect(summaryVariant('months')).toBe('strip');
     expect(summaryVariant('settings')).toBe('none');
     expect(summaryVariant('car')).toBe('none');
+    expect(summaryVariant('tax')).toBe('none');
   });
 });
 
@@ -51,6 +54,7 @@ describe('parseTab still handles old links', () => {
   it('deep links and legacy hash forms resolve to the same tab ids', () => {
     expect(parseTab('#settings')).toBe('settings');
     expect(parseTab('#/car')).toBe('car');
+    expect(parseTab('#tax')).toBe('tax');
     expect(parseTab('#Months')).toBe('months');
     expect(parseTab('#nope')).toBeNull();
   });
