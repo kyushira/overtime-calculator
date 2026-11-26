@@ -23,7 +23,7 @@ import {
   HCR_PER_CHILD,
   SPOUSE_RELIEF,
   SRS_CAP,
-  WMCR_FIXED_AMOUNTS,
+  workingMotherChildRelief,
   COURSE_FEES_CAP,
   CPF_TOPUP_TOTAL_CAP,
   type IncomeYear,
@@ -53,8 +53,14 @@ export interface ReliefContext {
   residency: Residency;
   /** Amounts already claimed for other reliefs. Read by the lifeInsurance cap (claimed.cpf). */
   claimed: Partial<Record<ReliefId, number>>;
-  /** Parents / children counts for unit-based reliefs. */
+  /** Parents / children counts for unit-based reliefs. For wmcr, `units.wmcr` counts children born/adopted 2024 or later. */
   units: Partial<Record<ReliefId, number>>;
+  /**
+   * WMCR only: number of children born/adopted before 2024-01-01 (percentage
+   * regime). Treated as the OLDER children, so they take the first birth-order
+   * positions and 2024+ children (units.wmcr) follow them. Absent = 0.
+   */
+  wmcrPre2024?: number;
   /**
    * Selected tier id per tiered relief (see reliefTiers). Missing or unknown ids
    * fall back to the default (first) tier.
@@ -163,7 +169,8 @@ export const RELIEF_CATALOGUE: Record<ReliefId, ReliefMeta> = {
   wmcr: {
     id: 'wmcr',
     label: "Working Mother's Child Relief",
-    blurb: 'Per child, for a working mother; the amount depends on birth order.',
+    blurb:
+      'Per child, for a working mother. Children born before 2024 are a percentage of your earned income; later children are fixed amounts.',
     unitLabel: 'children',
     maxUnits: UI_MAX_CHILDREN,
     capIsUpperBound: true,
@@ -211,13 +218,39 @@ function clampUnits(units: number | undefined, max: number): number {
   return Math.min(Math.max(Math.floor(units), 0), max);
 }
 
-/** WMCR summed over `count` children in birth order (fixed-dollar regime only). */
-function wmcrForCount(count: number): number {
-  let total = 0;
-  for (let i = 0; i < count; i += 1) {
-    total += WMCR_FIXED_AMOUNTS[Math.min(i, WMCR_FIXED_AMOUNTS.length - 1)];
-  }
-  return total;
+/**
+ * WMCR cap for the household as entered. Pre-2024 children come first in birth
+ * order (percentage regime), 2024+ children follow (fixed-dollar regime). Uses
+ * workingMotherChildRelief, so the 100%-of-income cap and the $50,000 per-child
+ * cap apply.
+ *
+ * ASSUMPTION: the QCR + HCR entered is spread evenly across the WMCR children,
+ * because the UI counts children rather than naming them. If QCR/HCR is claimed
+ * for only some of them, the per-child room is understated and the cap is high.
+ */
+function wmcrCap(ctx: ReliefContext): number {
+  const pre2024 = clampUnits(ctx.wmcrPre2024, UI_MAX_CHILDREN);
+  const from2024 = clampUnits(ctx.units.wmcr, UI_MAX_CHILDREN - pre2024);
+  const count = pre2024 + from2024;
+  if (count === 0) return 0;
+  const qcrOrHcrPerChild =
+    (nonNegFinite(ctx.claimed.qcr ?? 0) + nonNegFinite(ctx.claimed.hcr ?? 0)) / count;
+  const children = [
+    ...Array.from({ length: pre2024 }, () => ({
+      bornOrAdoptedOn: '2023-01-01',
+      qcrOrHcrClaimed: qcrOrHcrPerChild,
+    })),
+    ...Array.from({ length: from2024 }, () => ({
+      bornOrAdoptedOn: '2024-01-01',
+      qcrOrHcrClaimed: qcrOrHcrPerChild,
+    })),
+  ];
+  return roundCents(
+    workingMotherChildRelief({
+      motherEarnedIncome: nonNegFinite(ctx.employmentIncome) + nonNegFinite(ctx.bonus),
+      children,
+    }),
+  );
 }
 
 /**
@@ -339,7 +372,7 @@ export function reliefCap(id: ReliefId, ctx: ReliefContext): number {
     case 'hcr':
       return HCR_PER_CHILD * clampUnits(units, UI_MAX_CHILDREN);
     case 'wmcr':
-      return wmcrForCount(clampUnits(units, UI_MAX_CHILDREN));
+      return wmcrCap(ctx);
     case 'courseFees':
       return COURSE_FEES_CAP;
     case 'cpfCashTopUp':

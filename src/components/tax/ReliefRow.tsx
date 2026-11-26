@@ -13,6 +13,49 @@ interface Props {
 
 const stepBtn = `${btnOutline} min-h-11 min-w-11 px-0 disabled:opacity-40`;
 
+interface StepperProps {
+  label: string;
+  singular: string;
+  value: number;
+  /** Largest value the counter can reach on its own (the relief's maxUnits). */
+  max: number;
+  /** Headroom left for this counter after the other counters in the same relief. */
+  room: number;
+  onChange: (v: number) => void;
+}
+
+/** Integer counter with − / + buttons. `room` limits the + button. */
+function Stepper({ label, singular, value, max, room, onChange }: StepperProps) {
+  return (
+    <div role="group" aria-label={label} className="min-w-0">
+      <span className="mb-1.5 block text-[13px] font-medium text-slate-700">{label}</span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label={`Remove one ${singular}`}
+          disabled={value <= 0}
+          onClick={() => onChange(value - 1)}
+          className={stepBtn}
+        >
+          <Minus size={16} strokeWidth={1.5} aria-hidden />
+        </button>
+        <output aria-live="polite" className="min-w-8 text-center text-sm font-medium tabular-nums text-slate-900">
+          {value}
+        </output>
+        <button
+          type="button"
+          aria-label={`Add one ${singular}`}
+          disabled={room <= 0 || value >= max}
+          onClick={() => onChange(value + 1)}
+          className={stepBtn}
+        >
+          <Plus size={16} strokeWidth={1.5} aria-hidden />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** One relief: eligibility, tier, units, amount, cap. Every figure comes from the row. */
 export function ReliefRow({ row, ya, setEntry }: Props) {
   const { id, meta, available, eligible, cap, claimed, entered, isSuggested, tiers, tierId, units } = row;
@@ -64,33 +107,36 @@ export function ReliefRow({ row, ya, setEntry }: Props) {
           </Field>
         )}
 
-        {meta.unitLabel && (
-          <div role="group" aria-label={`Number of ${unitName}`} className="min-w-0">
-            <span className="mb-1.5 block text-[13px] font-medium text-slate-700">Number of {unitName}</span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label={`Remove one ${singular}`}
-                disabled={units <= 0}
-                onClick={() => setEntry(id, { units: units - 1 })}
-                className={stepBtn}
-              >
-                <Minus size={16} strokeWidth={1.5} aria-hidden />
-              </button>
-              <output aria-live="polite" className="min-w-8 text-center text-sm font-medium tabular-nums text-slate-900">
-                {units}
-              </output>
-              <button
-                type="button"
-                aria-label={`Add one ${singular}`}
-                disabled={meta.maxUnits !== undefined && units >= meta.maxUnits}
-                onClick={() => setEntry(id, { units: units + 1 })}
-                className={stepBtn}
-              >
-                <Plus size={16} strokeWidth={1.5} aria-hidden />
-              </button>
-            </div>
-          </div>
+        {id === 'wmcr' ? (
+          <>
+            <Stepper
+              label="Children born before 2024"
+              singular="pre-2024 child"
+              value={row.unitsPre2024}
+              max={meta.maxUnits ?? 0}
+              room={(meta.maxUnits ?? 0) - units}
+              onChange={(v) => setEntry(id, { unitsPre2024: v })}
+            />
+            <Stepper
+              label="Children born or adopted 2024 or later"
+              singular="2024+ child"
+              value={units}
+              max={meta.maxUnits ?? 0}
+              room={(meta.maxUnits ?? 0) - row.unitsPre2024}
+              onChange={(v) => setEntry(id, { units: v })}
+            />
+          </>
+        ) : (
+          meta.unitLabel && (
+            <Stepper
+              label={`Number of ${unitName}`}
+              singular={singular}
+              value={units}
+              max={meta.maxUnits ?? 0}
+              room={meta.maxUnits !== undefined ? meta.maxUnits - units : Infinity}
+              onChange={(v) => setEntry(id, { units: v })}
+            />
+          )
         )}
 
         <Field

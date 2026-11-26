@@ -267,3 +267,36 @@ describe('migrateTaxState', () => {
     expect(migrated.entries.qcr?.units).toBe(10);
   });
 });
+
+describe('WMCR pre-2024 children in the Tax model', () => {
+  it('a pre-2024 child is capped at 15% of earned income', () => {
+    const view = buildTaxView(
+      stateWith({ wmcr: { amount: 999999, unitsPre2024: 1 } }, { employmentIncome: 100000 }),
+    );
+    const row = rowOf(view, 'wmcr');
+    expect(row.cap).toBe(15000);
+    expect(row.claimed).toBe(15000);
+    expect(row.unitsPre2024).toBe(1);
+  });
+
+  it('existing wmcr units (no unitsPre2024) keep the fixed-dollar 2024+ cap', () => {
+    const view = buildTaxView(stateWith({ wmcr: { units: 2, amount: null } }, { employmentIncome: 100000 }));
+    const row = rowOf(view, 'wmcr');
+    expect(row.cap).toBe(18000);
+    expect(row.unitsPre2024).toBe(0);
+  });
+
+  it('migrate keeps a valid unitsPre2024, clamps it, and drops it for other reliefs', () => {
+    const migrated = migrateTaxState({
+      v: 1,
+      entries: {
+        wmcr: { eligible: true, amount: null, units: 1, unitsPre2024: 3 },
+        qcr: { eligible: true, amount: null, units: 1, unitsPre2024: 3 },
+      },
+    });
+    expect(migrated.entries.wmcr?.unitsPre2024).toBe(3);
+    expect(migrated.entries.qcr?.unitsPre2024).toBeUndefined();
+    const big = migrateTaxState({ v: 1, entries: { wmcr: { unitsPre2024: 99 } } });
+    expect(big.entries.wmcr?.unitsPre2024).toBe(10);
+  });
+});

@@ -129,6 +129,56 @@ describe('reliefCap', () => {
     expect(reliefCap('wmcr', ctx({ units: { wmcr: 4 } }))).toBe(42000);
   });
 
+  describe('wmcr with pre-2024 children', () => {
+    const wmcr = (over: Partial<ReliefContext>) => reliefCap('wmcr', ctx(over));
+
+    it('1 pre-2024 child at income $100,000 → 15% = $15,000', () => {
+      expect(wmcr({ employmentIncome: 100000, bonus: 0, wmcrPre2024: 1 })).toBe(15000);
+    });
+
+    it('3 pre-2024 children at income $100,000 → 15 + 20 + 25 = 60% = $60,000', () => {
+      expect(wmcr({ employmentIncome: 100000, bonus: 0, wmcrPre2024: 3 })).toBe(60000);
+    });
+
+    it('2024+ children keep the fixed amounts when no pre-2024 children are given', () => {
+      expect(wmcr({ employmentIncome: 100000, bonus: 0, units: { wmcr: 2 } })).toBe(18000);
+    });
+
+    it('mixed: 1 pre-2024 child (15%) then 1 born 2024+ (fixed $10,000 as 2nd child)', () => {
+      expect(wmcr({ employmentIncome: 100000, bonus: 0, wmcrPre2024: 1, units: { wmcr: 1 } })).toBe(
+        25000,
+      );
+    });
+
+    it('total is capped at 100% of mother earned income (5 pre-2024 children = 110%)', () => {
+      expect(wmcr({ employmentIncome: 10000, bonus: 0, wmcrPre2024: 5 })).toBe(10000);
+    });
+
+    it('earned income for the percentage is employment plus bonus', () => {
+      expect(wmcr({ employmentIncome: 60000, bonus: 40000, wmcrPre2024: 1 })).toBe(15000);
+    });
+
+    it('per-child $50,000 cap: 15% of $1,000,000 less $4,000 QCR → $46,000', () => {
+      expect(
+        wmcr({ employmentIncome: 1000000, bonus: 0, wmcrPre2024: 1, claimed: { qcr: 4000 } }),
+      ).toBe(46000);
+    });
+
+    it('per-child $50,000 cap applies to each of 3 children (QCR $4,000 each, 25% = $250k nominal)', () => {
+      expect(
+        wmcr({ employmentIncome: 1000000, bonus: 0, wmcrPre2024: 3, claimed: { qcr: 12000 } }),
+      ).toBe(3 * 46000);
+    });
+
+    it('pre-2024 plus 2024+ children are clamped to UI_MAX_CHILDREN (10) in total', () => {
+      // 8 pre-2024 children hit the $50,000 per-child cap (no QCR): 8 × 50,000.
+      // Only 2 of the 2024+ units fit: they sit at positions 9–10 (3rd+ slot) → 12,000 each.
+      expect(
+        wmcr({ employmentIncome: 1000000, bonus: 0, wmcrPre2024: 8, units: { wmcr: 8 } }),
+      ).toBe(8 * 50000 + 2 * 12000);
+    });
+  });
+
   it('courseFees is 0 in YA2026 and $5,500 in YA2025', () => {
     expect(reliefCap('courseFees', ctx({ ya: 2026 }))).toBe(0);
     expect(reliefCap('courseFees', ctx({ ya: 2025 }))).toBe(5500);

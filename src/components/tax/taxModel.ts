@@ -34,10 +34,12 @@ export interface EntryState {
   eligible: boolean;
   /** null = use the computed suggestion (only meaningful for autoSuggest reliefs). */
   amount: number | null;
-  /** Parents / children count for unit-based reliefs. */
+  /** Parents / children count for unit-based reliefs. For wmcr: children born/adopted 2024 or later. */
   units: number;
   /** Selected tier id for a tiered relief. Absent = default tier. */
   tier?: string;
+  /** wmcr only: children born/adopted before 2024 (percentage regime). Absent = 0. */
+  unitsPre2024?: number;
 }
 
 export interface TaxState {
@@ -64,6 +66,8 @@ export interface TaxRow {
   /** true when `claimed` came from the suggestion rather than a typed amount. */
   isSuggested: boolean;
   units: number;
+  /** wmcr only: children born/adopted before 2024. 0 for every other relief. */
+  unitsPre2024: number;
   /** Selectable tiers (empty when the relief has none). Default tier first. */
   tiers: ReliefTier[];
   /** Id of the tier in force (the selected one, or the default); null without tiers. */
@@ -164,9 +168,12 @@ export function buildTaxView(state: TaxState): TaxView {
     if (tier !== undefined) tiers[id] = tier;
   }
 
+  const wmcrPre2024 = clampUnits(state.entries.wmcr?.unitsPre2024 ?? 0, UI_MAX_CHILDREN);
+
   const claimed: Partial<Record<ReliefId, number>> = {};
   const rows: TaxRow[] = [];
-  // RELIEF_IDS order matters: cpf is claimed before lifeInsurance, whose cap reads claimed.cpf.
+  // RELIEF_IDS order matters: cpf is claimed before lifeInsurance, whose cap reads claimed.cpf,
+  // and qcr/hcr are claimed before wmcr, whose per-child cap reads them.
   for (const id of RELIEF_IDS) {
     const meta = RELIEF_CATALOGUE[id];
     const entry = state.entries[id];
@@ -181,6 +188,7 @@ export function buildTaxView(state: TaxState): TaxView {
       claimed,
       units,
       tiers,
+      wmcrPre2024,
     };
     const cap = reliefCap(id, ctx);
     const tierList = reliefTiers(id, ctx) ?? [];
@@ -201,6 +209,7 @@ export function buildTaxView(state: TaxState): TaxView {
       entered: amount,
       isSuggested: eligible && available && meta.autoSuggest && amount === null,
       units: units[id] ?? 0,
+      unitsPre2024: id === 'wmcr' ? wmcrPre2024 : 0,
       tiers: [...tierList],
       tierId,
     });
@@ -255,6 +264,9 @@ function parseEntry(raw: unknown, id: ReliefId): EntryState {
   const entry: EntryState = { eligible, amount, units };
   // Unknown tier ids are dropped, so the relief falls back to its default tier.
   if (typeof raw.tier === 'string' && isKnownTier(id, raw.tier)) entry.tier = raw.tier;
+  if (id === 'wmcr' && typeof raw.unitsPre2024 === 'number') {
+    entry.unitsPre2024 = clampUnits(raw.unitsPre2024, UI_MAX_CHILDREN);
+  }
   return entry;
 }
 
