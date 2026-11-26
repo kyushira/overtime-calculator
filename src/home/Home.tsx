@@ -74,7 +74,7 @@ export function Home() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-home-page text-home-title">
+    <div className="app-bg min-h-screen bg-home-page text-home-title">
       <header className="mx-auto flex max-w-xl items-center gap-2 px-4 pt-4 pb-2">
         <h1 className="min-w-0 flex-1 truncate text-[22px] font-bold text-home-title">Finance</h1>
         <ThemeToggle pref={theme.pref} onCycle={theme.cyclePref} />
