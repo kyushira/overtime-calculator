@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAR_TABS, isBarTab, modeOf, nextLastPayTab, parseBarTab, summaryVariant } from './navModel';
+import { BAR_TABS, isBarTab, modeOf, nextLastPayTab, parseBarTab, summaryVariant, tabAllowed } from './navModel';
 import { parseTab, TABS } from '../../hooks/useTab';
 
 describe('modeOf', () => {
@@ -57,5 +57,20 @@ describe('parseTab still handles old links', () => {
     expect(parseTab('#tax')).toBe('tax');
     expect(parseTab('#Months')).toBe('months');
     expect(parseTab('#nope')).toBeNull();
+  });
+});
+
+describe('tabAllowed', () => {
+  it('pay route shows only the pay tabs (incl. settings)', () => {
+    for (const t of ['calculator', 'breakdown', 'target', 'months', 'settings'] as const) expect(tabAllowed('pay', t)).toBe(true);
+    expect(tabAllowed('pay', 'car')).toBe(false);
+    expect(tabAllowed('pay', 'tax')).toBe(false);
+  });
+
+  it('car and tax routes show only their own tab', () => {
+    expect(tabAllowed('car', 'car')).toBe(true);
+    expect(tabAllowed('car', 'calculator')).toBe(false);
+    expect(tabAllowed('tax', 'tax')).toBe(true);
+    expect(tabAllowed('tax', 'settings')).toBe(false);
   });
 });

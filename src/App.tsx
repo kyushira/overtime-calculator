@@ -1,4 +1,5 @@
-import { Calculator, Car, CalendarRange, Landmark, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
+import { Calculator, Car, CalendarRange, ChevronLeft, Landmark, ReceiptText, Settings, Target, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Breakdown } from './components/Breakdown';
 import { CarCalculator } from './components/CarCalculator';
@@ -14,9 +15,9 @@ import { AppearanceCard } from './components/AppearanceCard';
 import { PrivacyToggle } from './components/PrivacyToggle';
 import { ThemeToggle } from './components/ThemeToggle';
 import { BottomBar } from './components/nav/BottomBar';
-import { PayCarSwitch } from './components/nav/PayCarSwitch';
 import { SummaryStrip } from './components/nav/SummaryStrip';
-import { isBarTab, modeOf, nextLastPayTab, parseBarTab, summaryVariant, type BarTab, type Mode } from './components/nav/navModel';
+import { isBarTab, nextLastPayTab, parseBarTab, summaryVariant, type BarTab, type Mode } from './components/nav/navModel';
+import { HOME_MODULES } from './home/modules';
 import { useCompactOnScroll } from './hooks/useCompactOnScroll';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { usePayrollForm } from './hooks/usePayrollForm';
@@ -73,12 +74,13 @@ function Logo() {
   );
 }
 
-export default function App() {
+/** One app shell for /pay, /car and /tax. The route fixes the module; the tab is inside it. */
+export default function App({ module }: { module: Mode }) {
   const [config, setConfig] = useLocalStorage<PayrollConfig>('otcalc.config.v1', DEFAULT_CONFIG, migrateConfig);
   const [form, setForm] = useLocalStorage<FormState>('otcalc.form.v1', initialForm(), (raw) => migrateForm(raw, initialForm()));
-  const [tab, setTab] = useTab();
-  // Last pay tab, so Pay | Car returns to it (remembered across reloads).
-  const [lastPay, setLastPay] = useLocalStorage<BarTab>('otcalc.payTab.v1', 'calculator', parseBarTab);
+  const [tab, setTab] = useTab(module);
+  // Last pay tab, so /pay reopens on it (remembered across reloads).
+  const [, setLastPay] = useLocalStorage<BarTab>('otcalc.payTab.v1', 'calculator', parseBarTab);
   // Privacy: mask the summary figures (remembered across reloads).
   const [hidePay, setHidePay] = useLocalStorage<boolean>('otcalc.hidePay.v1', false, (raw) => raw === true);
   // Collapsed summary strip (Breakdown, Target, Months): tapped open to the full grid.
@@ -97,7 +99,7 @@ export default function App() {
 
   const tabIdx = TAB_ITEMS.findIndex((t) => t.id === tab);
   const current = TAB_ITEMS[tabIdx];
-  const mode: Mode = modeOf(tab);
+  const moduleTitle = HOME_MODULES.find((m) => m.id === module)?.title ?? '';
   const payIdx = PAY_ITEMS.findIndex((t) => t.id === tab);
   const prevTabIdx = useRef(tabIdx);
   const tabDir = tabIdx > prevTabIdx.current ? 1 : tabIdx < prevTabIdx.current ? -1 : 0;
@@ -110,8 +112,6 @@ export default function App() {
     setTab(t);
     window.scrollTo({ top: 0 });
   };
-
-  const switchMode = (m: Mode) => goTo(m === 'pay' ? lastPay : m);
 
   const applyCombo = (q: OtQuantities) => {
     update({
@@ -154,43 +154,46 @@ export default function App() {
               const Icon = t.icon;
               return (
                 <li key={t.id}>
-                  <button
-                    type="button"
+                  <Link
+                    href={`/pay#${t.id}`}
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => goTo(t.id)}
+                    onClick={(e) => {
+                      // On /pay the sub-tabs switch in place; from /car or /tax they are real links.
+                      if (module !== 'pay') return;
+                      e.preventDefault();
+                      goTo(t.id);
+                    }}
                     className={`flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
                       active ? 'text-slate-900' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
                     <Icon {...ICON} aria-hidden />
                     {t.label}
-                  </button>
+                  </Link>
                 </li>
               );
             })}
           </ul>
-          <button
-            type="button"
-            onClick={() => goTo('car')}
-            aria-current={mode === 'car' ? 'page' : undefined}
+          <Link
+            href="/car"
+            aria-current={module === 'car' ? 'page' : undefined}
             className={`mt-2 flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
-              mode === 'car' ? 'text-accent' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              module === 'car' ? 'text-accent' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
             <Car {...ICON} aria-hidden />
             Car
-          </button>
-          <button
-            type="button"
-            onClick={() => goTo('tax')}
-            aria-current={mode === 'tax' ? 'page' : undefined}
+          </Link>
+          <Link
+            href="/tax"
+            aria-current={module === 'tax' ? 'page' : undefined}
             className={`mt-1 flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
-              mode === 'tax' ? 'text-accent' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              module === 'tax' ? 'text-accent' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
             <Landmark {...ICON} aria-hidden />
             Tax
-          </button>
+          </Link>
         </nav>
 
         <p className="mt-auto rounded-lg border border-slate-200 p-3 text-[11px] leading-snug text-slate-400">
@@ -199,30 +202,42 @@ export default function App() {
       </aside>
 
       <div className="lg:pl-60">
-        {/* Top bar: short title on phones, view title on desktop. Pay | Car switch, eye, theme, settings gear. */}
+        {/* Top bar: back to Home, module title, eye, theme, settings gear. */}
         <header className="border-b border-slate-200 bg-surface">
           <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-2.5 sm:px-6 lg:h-16 lg:gap-3 lg:py-0">
+            <Link href="/" aria-label="Home" title="Home" className={`${HEADER_BTN} text-slate-500`}>
+              <ChevronLeft size={22} strokeWidth={1.75} aria-hidden />
+            </Link>
             <div className="min-w-0 flex-1">
               <h1 id="view-title" className="truncate text-[15px] font-semibold text-slate-900 lg:text-lg">
-                <span className="lg:hidden">OT Calc</span>
-                <span className="hidden lg:inline">{current.label}</span>
+                {moduleTitle}
               </h1>
               <p className="hidden truncate text-[13px] text-slate-500 sm:block">{current.blurb}</p>
             </div>
-            <PayCarSwitch mode={mode} onChange={switchMode} />
             <div className="flex shrink-0 items-center">
               <PrivacyToggle hidden={hidePay} onToggle={() => setHidePay((h) => !h)} />
               <ThemeToggle pref={theme.pref} onCycle={theme.cyclePref} />
-              <button
-                type="button"
-                onClick={() => goTo('settings')}
-                aria-label="Settings"
-                aria-current={tab === 'settings' ? 'page' : undefined}
-                title="Settings"
-                className={`${HEADER_BTN} ${tab === 'settings' ? 'bg-accent-bg text-accent' : 'text-slate-500'}`}
-              >
-                <Settings size={18} strokeWidth={1.5} aria-hidden />
-              </button>
+              {module === 'pay' ? (
+                <button
+                  type="button"
+                  onClick={() => goTo('settings')}
+                  aria-label="Settings"
+                  aria-current={tab === 'settings' ? 'page' : undefined}
+                  title="Settings"
+                  className={`${HEADER_BTN} ${tab === 'settings' ? 'bg-accent-bg text-accent' : 'text-slate-500'}`}
+                >
+                  <Settings size={18} strokeWidth={1.5} aria-hidden />
+                </button>
+              ) : (
+                <Link
+                  href="/pay#settings"
+                  aria-label="Settings"
+                  title="Settings"
+                  className={`${HEADER_BTN} text-slate-500`}
+                >
+                  <Settings size={18} strokeWidth={1.5} aria-hidden />
+                </Link>
+              )}
             </div>
           </div>
         </header>
@@ -254,7 +269,7 @@ export default function App() {
         <main
           id="panel"
           aria-labelledby="view-title"
-          className={`mx-auto max-w-6xl overflow-x-clip px-3 pt-4 sm:px-6 sm:pt-6 ${mode === 'pay' ? 'pb-28 lg:pb-10' : 'pb-10'}`}
+          className={`mx-auto max-w-6xl overflow-x-clip px-3 pt-4 sm:px-6 sm:pt-6 ${module === 'pay' ? 'pb-28 lg:pb-10' : 'pb-10'}`}
         >
           <div key={tab} className="anim-tab space-y-4" style={{ '--dir': tabDir } as CSSProperties}>
             {summary === 'strip' && summaryOpen && (
@@ -346,8 +361,8 @@ export default function App() {
         </main>
       </div>
 
-      {/* Pay mode only: four tabs. Settings (header gear) and Car (own mode) have no bar tab. */}
-      {mode === 'pay' && (
+      {/* Pay route only: four tabs. Settings (header gear) and Car/Tax (own routes) have no bar tab. */}
+      {module === 'pay' && (
         <BottomBar items={PAY_ITEMS} active={isBarTab(tab) ? tab : null} onSelect={goTo} />
       )}
     </div>

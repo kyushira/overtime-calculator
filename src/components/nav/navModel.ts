@@ -1,7 +1,7 @@
 import type { Tab } from '../../hooks/useTab';
 
 /**
- * Pure navigation model for the Pay | Car split. No React here, so the mapping
+ * Pure navigation model for the Pay / Car / Tax routes. No React here, so the mapping
  * from tab id to mode / summary variant can be unit-tested.
  */
 
@@ -17,6 +17,11 @@ export function modeOf(tab: Tab): Mode {
   if (tab === 'car') return 'car';
   if (tab === 'tax') return 'tax';
   return 'pay';
+}
+
+/** Whether a route's module can show this tab: /pay owns the pay tabs, /car and /tax their own. */
+export function tabAllowed(module: Mode, tab: Tab): boolean {
+  return modeOf(tab) === module;
 }
 
 export function isBarTab(tab: Tab): tab is BarTab {
