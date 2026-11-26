@@ -30,3 +30,45 @@ export function parseNumber(v: string): number | null {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
+
+/**
+ * Display text for an amount field: thousand separators on the integer part, decimals kept as
+ * typed. Drops every character other than digits and '.', and keeps only the first '.'.
+ * "90000" to "90,000"; "0012.5" to "12.5"; "12a3" to "123".
+ */
+export function formatAmountInput(text: string): string {
+  const cleaned = text.replace(/[^0-9.]/g, '');
+  const dot = cleaned.indexOf('.');
+  const intRaw = dot === -1 ? cleaned : cleaned.slice(0, dot);
+  const decRaw = dot === -1 ? null : cleaned.slice(dot + 1).replace(/\./g, '');
+  const intPart = intRaw.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return decRaw === null ? intPart : `${intPart}.${decRaw}`;
+}
+
+/**
+ * Number for an amount field's text. Commas are stripped. Blank input is null. Any other
+ * character (or a lone '.') makes the input invalid, so the result is null.
+ */
+export function parseAmountInput(text: string): number | null {
+  const s = text.replace(/,/g, '').trim();
+  if (s === '' || s === '.' || !/^\d*\.?\d*$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Caret position in `formatted` that keeps the same number of digits and '.' characters before
+ * it as `raw` had before `caret`. Lets the caret stay put while separators are inserted.
+ */
+export function amountCaretAfterFormat(raw: string, caret: number, formatted: string): number {
+  const keep = (raw.slice(0, caret).match(/[0-9.]/g) ?? []).length;
+  if (keep === 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (/[0-9.]/.test(formatted[i])) {
+      seen++;
+      if (seen === keep) return i + 1;
+    }
+  }
+  return formatted.length;
+}

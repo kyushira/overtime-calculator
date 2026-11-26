@@ -1,8 +1,8 @@
 import { Minus, Plus } from 'lucide-react';
 import type { ReliefId } from '../../tax';
 import { money, moneyWhole } from '../../utils/format';
-import { btnOutline, Badge, Field, NumInput } from '../ui';
-import { numText, parseNumber } from './fields';
+import { btnOutline, Badge, Field } from '../ui';
+import { AmountInput } from './AmountInput';
 import type { EntryState, TaxRow } from './taxModel';
 
 interface Props {
@@ -168,12 +168,12 @@ export function ReliefRow({ row, ya, setEntry }: Props) {
             </div>
           }
         >
-          <NumInput
-            value={isSuggested ? numText(claimed) : numText(entered)}
+          <AmountInput
+            value={isSuggested ? claimed : entered}
             prefix="S$"
             ariaLabel={`${meta.label} amount in S$`}
             describedBy={noteId}
-            onChange={(v) => setEntry(id, { amount: parseNumber(v) })}
+            onChange={(v) => setEntry(id, { amount: v })}
           />
         </Field>
       </fieldset>

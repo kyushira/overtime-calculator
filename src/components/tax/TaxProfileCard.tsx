@@ -1,6 +1,7 @@
 import { incomeYearForYa, type Residency, type YA } from '../../tax';
 import { Card, Field, inputClass, NumInput, Segmented } from '../ui';
-import { numText, parseNumber } from './fields';
+import { parseNumber } from './fields';
+import { AmountInput } from './AmountInput';
 import type { TaxState } from './taxModel';
 
 interface Props {
@@ -39,20 +40,20 @@ export function TaxProfileCard({ state, setProfile }: Props) {
         </Field>
 
         <Field label="Employment income" className="min-w-0">
-          <NumInput
-            value={numText(state.employmentIncome)}
+          <AmountInput
+            value={state.employmentIncome}
             prefix="S$"
             ariaLabel="Employment income in S$"
-            onChange={(v) => setProfile({ employmentIncome: parseNumber(v) ?? 0 })}
+            onChange={(v) => setProfile({ employmentIncome: v ?? 0 })}
           />
         </Field>
 
         <Field label="Bonus" className="min-w-0">
-          <NumInput
-            value={numText(state.bonus)}
+          <AmountInput
+            value={state.bonus}
             prefix="S$"
             ariaLabel="Bonus in S$"
-            onChange={(v) => setProfile({ bonus: parseNumber(v) ?? 0 })}
+            onChange={(v) => setProfile({ bonus: v ?? 0 })}
           />
         </Field>
 
