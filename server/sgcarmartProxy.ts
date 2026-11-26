@@ -10,7 +10,6 @@
  * Written against web-standard APIs and structural request/response types, so it needs no Node
  * type package and type-checks alongside the browser code.
  */
-import type { Connect, Plugin } from 'vite';
 import {
   LISTING_FIELDS,
   isAllowedSgcarmartUrl,
@@ -352,23 +351,5 @@ export function createSgcarmartHandler(options: SgcarmartProxyOptions = {}): Pro
       console.error('[sgcarmart-proxy] unexpected error', err);
       fail(res, 500, 'internal');
     }
-  };
-}
-
-/** Vite plugin: serves the proxy from both `vite` (dev) and `vite preview`. */
-export function sgcarmartProxy(options: SgcarmartProxyOptions = {}): Plugin {
-  const handle = createSgcarmartHandler(options);
-  // Vite types the connect app with Node's IncomingMessage/ServerResponse, which do not resolve to
-  // usable declarations in this project (no @types/node). The handler only touches the structural
-  // subset declared above, which Node's real objects satisfy at runtime, so the boundary is one cast.
-  const middleware = handle as unknown as Connect.NextHandleFunction;
-  return {
-    name: 'sgcarmart-proxy',
-    configureServer(server) {
-      server.middlewares.use(middleware);
-    },
-    configurePreviewServer(server) {
-      server.middlewares.use(middleware);
-    },
   };
 }

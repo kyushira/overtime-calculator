@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSgcarmartHandler, sgcarmartProxy, type SgcarmartProxyOptions } from './sgcarmartProxy';
+import { createSgcarmartHandler, type SgcarmartProxyOptions } from './sgcarmartProxy';
 import audiHtml from '../src/utils/__fixtures__/sgcarmart-audi-a4-1551328.html?raw';
 import hondaHtml from '../src/utils/__fixtures__/sgcarmart-honda-vezel-1551624.html?raw';
 
@@ -426,18 +426,5 @@ describe('response hygiene', () => {
     const out = await h.get(AUDI);
     expect(Object.keys(out.json).sort()).toEqual(['error', 'fields', 'missing', 'ok']);
     expect(JSON.stringify(out.json)).not.toContain('internal secret detail');
-  });
-});
-
-describe('sgcarmartProxy Vite plugin', () => {
-  it('mounts the same middleware on the dev and preview servers', () => {
-    const plugin = sgcarmartProxy();
-    const devUse = vi.fn();
-    const previewUse = vi.fn();
-    (plugin.configureServer as unknown as (s: unknown) => void)({ middlewares: { use: devUse } });
-    (plugin.configurePreviewServer as unknown as (s: unknown) => void)({ middlewares: { use: previewUse } });
-    expect(devUse).toHaveBeenCalledTimes(1);
-    expect(previewUse).toHaveBeenCalledTimes(1);
-    expect(typeof devUse.mock.calls[0][0]).toBe('function');
   });
 });
