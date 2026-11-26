@@ -159,7 +159,7 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
           className={`relative z-10 flex-1 whitespace-nowrap rounded-md px-2 font-medium transition-colors duration-200 ${size === 'sm' ? 'py-1 text-xs' : 'min-h-11 py-1.5 text-sm'} ${
             value === o.value
               ? accentSelected ? 'font-semibold text-accent' : 'text-slate-900'
-              : 'text-slate-500 hover:text-slate-800'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           {o.label}
