@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useTheme } from '../hooks/useTheme';
 import { HOME_MODULES, legacyHashTarget, type HomeModule, type ModuleIconName } from './modules';
+import { tileTint } from './tints';
 
 const ICONS: Record<ModuleIconName, LucideIcon> = {
   Wallet,
@@ -24,9 +25,10 @@ const ICONS: Record<ModuleIconName, LucideIcon> = {
 /** Shared by the icon tile and the title so a coming-soon row dims both together. */
 function RowLead({ module, dim }: { module: HomeModule; dim: boolean }) {
   const Icon = ICONS[module.icon];
+  const tint = tileTint(module.id);
   return (
     <>
-      <span className={`grid size-[52px] shrink-0 place-items-center rounded-xl bg-home-tile ${dim ? 'opacity-[0.45]' : ''}`}>
+      <span className={`grid size-[52px] shrink-0 place-items-center rounded-xl ${tint.fill} ${dim ? 'opacity-[0.45]' : tint.glow}`}>
         <Icon size={24} strokeWidth={1.75} aria-hidden className="text-home-icon" />
       </span>
       <span className="min-w-0 flex-1">
