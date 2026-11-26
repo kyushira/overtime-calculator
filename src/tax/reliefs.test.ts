@@ -201,6 +201,19 @@ describe('§2.5 Parent relief', () => {
   it('sums at most two dependants (3 eligible → 2 counted)', () => {
     expect(parentRelief([stays, stays, notStays])).toBe(18000);
   });
+  it('counts the two highest-relief dependants even when a lower one is listed first', () => {
+    // Lower-value dependant (does not stay, 5,500) first; the two stays-with (9,000 each) must win.
+    expect(parentRelief([notStays, stays, stays])).toBe(18000);
+  });
+  it('ranks by relief amount, so a disabled non-stays dependant (10,000) beats a stays-with (9,000)', () => {
+    expect(parentRelief([stays, { ...notStays, disabled: true }, stays])).toBe(10000 + 9000);
+    expect(parentRelief([notStays, stays, { ...notStays, disabled: true }])).toBe(10000 + 9000);
+  });
+  it('input order does not change the total', () => {
+    const dependants = [notStays, { ...stays, disabled: true }, stays];
+    const reversed = [...dependants].reverse();
+    expect(parentRelief(dependants)).toBe(parentRelief(reversed));
+  });
   it('an ineligible dependant does not use up a dependant slot', () => {
     expect(
       parentRelief([{ ...stays, annualIncome: 9000 }, stays, notStays]),

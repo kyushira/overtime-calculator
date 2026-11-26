@@ -299,31 +299,27 @@ export interface ParentDependant {
  *
  * - Ineligible dependants (non-disabled with income above $8,000) are skipped
  *   and do not use up one of the two dependant slots.
- * - At most PARENT_MAX_DEPENDANTS eligible dependants are counted, in the order
- *   given. FLAG: the caller should order dependants by the claimant's preference
- *   if more than two are eligible; this function does not choose the best two.
+ * - At most PARENT_MAX_DEPENDANTS eligible dependants are counted: the ones with
+ *   the highest relief amount (base × share). Input order does not matter.
  * - Age (≥55) and support tests are the caller's responsibility.
  */
 export function parentRelief(dependants: readonly ParentDependant[]): number {
-  let total = 0;
-  let counted = 0;
-  for (const dependant of dependants) {
-    if (counted >= PARENT_MAX_DEPENDANTS) break;
-    if (!dependant.disabled && dependant.annualIncome > DEPENDANT_INCOME_THRESHOLD) {
-      continue;
-    }
-    counted += 1;
-    const base = dependant.livesWithClaimant
-      ? dependant.disabled
-        ? PARENT_RELIEF.staysWithDisability
-        : PARENT_RELIEF.staysWith
-      : dependant.disabled
-        ? PARENT_RELIEF.notStaysWithDisability
-        : PARENT_RELIEF.notStaysWith;
-    const share = Math.min(1, Math.max(0, dependant.share ?? 1));
-    total += base * share;
-  }
-  return total;
+  const amounts = dependants
+    .filter((d) => d.disabled || d.annualIncome <= DEPENDANT_INCOME_THRESHOLD)
+    .map((dependant) => {
+      const base = dependant.livesWithClaimant
+        ? dependant.disabled
+          ? PARENT_RELIEF.staysWithDisability
+          : PARENT_RELIEF.staysWith
+        : dependant.disabled
+          ? PARENT_RELIEF.notStaysWithDisability
+          : PARENT_RELIEF.notStaysWith;
+      const share = Math.min(1, Math.max(0, dependant.share ?? 1));
+      return base * share;
+    })
+    .sort((a, b) => b - a)
+    .slice(0, PARENT_MAX_DEPENDANTS);
+  return amounts.reduce((total, amount) => total + amount, 0);
 }
 
 // ---------------------------------------------------------------------------
