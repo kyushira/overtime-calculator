@@ -95,6 +95,11 @@ export function upcoming(
   return items.sort((a, b) => a.days - b.days || a.sub.name.localeCompare(b.sub.name));
 }
 
+/** Copy sorted by next renewal (soonest first), then name. Stored dates are valid yyyy-mm-dd, so string order is date order. */
+export function sortByRenewal(subs: readonly Subscription[]): Subscription[] {
+  return [...subs].sort((a, b) => a.nextRenewal.localeCompare(b.nextRenewal) || a.name.localeCompare(b.name));
+}
+
 /** "in 0 days" wording as the UI shows it: "today", "tomorrow", "in N days". */
 export function relativeDays(days: number): string {
   if (days === 0) return 'today';

@@ -9,6 +9,7 @@ import {
   monthlyTotal,
   relativeDays,
   sanitiseSubscriptions,
+  sortByRenewal,
   toIsoDate,
   upcoming,
   type Subscription,
@@ -125,6 +126,19 @@ describe('upcoming', () => {
     const subs = [sub({ name: 'x', nextRenewal: '2026-12-06' })];
     expect(upcoming(subs, TODAY, 7)).toHaveLength(0);
     expect(upcoming(subs, TODAY, 10)).toHaveLength(1);
+  });
+});
+
+describe('sortByRenewal', () => {
+  it('orders by renewal date, then name, without mutating the input', () => {
+    const subs = [
+      sub({ name: 'b', nextRenewal: '2026-12-01' }),
+      sub({ name: 'z', nextRenewal: '2026-11-01' }),
+      sub({ name: 'a', nextRenewal: '2026-12-01' }),
+    ];
+    const before = subs.map((s) => s.name);
+    expect(sortByRenewal(subs).map((s) => s.name)).toEqual(['z', 'a', 'b']);
+    expect(subs.map((s) => s.name)).toEqual(before);
   });
 });
 
