@@ -5,6 +5,7 @@
 export * from './bands';
 export * from './engine';
 export * from './reliefs';
+export * from './catalogue';
 
 // `ReliefLine` is declared in both engine.ts (id: string, engine input shape) and
 // reliefs.ts (id: ReliefId, catalogue output shape). The star exports collide, so
