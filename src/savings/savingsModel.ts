@@ -36,7 +36,9 @@ export function totalBalance(accounts: readonly Account[]): number {
  */
 export function targetProgress(balance: number, target: number | null | undefined): number | null {
   if (target === null || target === undefined || !Number.isFinite(target) || target <= 0) return null;
-  const pct = Math.round((balance / target) * 100);
+  // Floor, so 100 only shows once the goal is actually reached (99.6% shows 99).
+  // Multiply first: (29 / 100) * 100 is 28.999… in floating point and would floor to 28.
+  const pct = Math.floor((balance * 100) / target);
   return Math.min(100, Math.max(0, pct));
 }
 

@@ -33,14 +33,24 @@ describe('totalBalance', () => {
 });
 
 describe('targetProgress', () => {
-  it('gives the rounded percent of the goal', () => {
+  it('gives the floored percent of the goal', () => {
     expect(targetProgress(2500, 10000)).toBe(25);
     expect(targetProgress(1, 3)).toBe(33);
-    expect(targetProgress(2, 3)).toBe(67);
+    expect(targetProgress(2, 3)).toBe(66);
   });
 
-  it('clamps at 100 when the goal is exceeded', () => {
+  it('floors just under the goal so 100 means reached', () => {
+    expect(targetProgress(996, 1000)).toBe(99);
+    expect(targetProgress(9999, 10000)).toBe(99);
+  });
+
+  it('is exactly 100 at the target and clamps at 100 above it', () => {
+    expect(targetProgress(10000, 10000)).toBe(100);
     expect(targetProgress(15000, 10000)).toBe(100);
+  });
+
+  it('is exact for values whose float percent sits just below an integer', () => {
+    expect(targetProgress(29, 100)).toBe(29);
   });
 
   it('clamps at 0 for a negative balance', () => {
