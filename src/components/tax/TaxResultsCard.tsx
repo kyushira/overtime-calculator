@@ -1,6 +1,6 @@
 import { money } from '../../utils/format';
 import { Card } from '../ui';
-import { percent } from './fields';
+import { percent, percentOneDp } from './fields';
 import type { TaxView } from './taxModel';
 
 interface Props {
@@ -33,7 +33,7 @@ export function TaxResultsCard({ view, ya }: Props) {
         <Line label="Tax before rebate" value={money(result.taxOnChargeable)} />
         {result.rebate > 0 && <Line label="Personal income tax rebate" value={money(-result.rebate)} />}
         <Line label="Tax payable" value={money(result.netTaxPayable)} strong />
-        <Line label="Effective rate" value={percent(view.effectiveRate)} />
+        <Line label="Effective rate" value={percentOneDp(view.effectiveRate)} />
         <Line label="Marginal rate" value={percent(result.marginalRate)} />
         <Line
           label="Estimated tax savings"
