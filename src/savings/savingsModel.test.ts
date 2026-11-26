@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  accountFromDraft,
+  draftFrom,
+  emptyDraft,
   emptySavings,
   newAccountId,
   parseSavings,
   SAVINGS_STORAGE_KEY,
   targetProgress,
   totalBalance,
+  validateDraft,
   type Account,
+  type AccountDraft,
 } from './savingsModel';
 
 const acct = (over: Partial<Account> = {}): Account => ({ id: 'a', name: 'Emergency', balance: 1000, ...over });
@@ -100,6 +105,76 @@ describe('parseSavings', () => {
   it('gives a stable id to an account stored without one', () => {
     const parsed = parseSavings({ v: 1, accounts: [{ name: 'Old', balance: 1 }] });
     expect(parsed.accounts[0].id).toBe('legacy-0');
+  });
+});
+
+const draft = (over: Partial<AccountDraft> = {}): AccountDraft => ({
+  name: 'Holiday',
+  balance: 500,
+  target: null,
+  rate: '',
+  ...over,
+});
+
+describe('validateDraft', () => {
+  it('accepts a name and balance alone', () => {
+    expect(validateDraft(draft())).toEqual({});
+  });
+
+  it('requires a non-blank name', () => {
+    expect(validateDraft(draft({ name: '   ' })).name).toBeDefined();
+  });
+
+  it('requires a balance', () => {
+    expect(validateDraft(draft({ balance: null })).balance).toBeDefined();
+  });
+
+  it('accepts a zero balance', () => {
+    expect(validateDraft(draft({ balance: 0 }))).toEqual({});
+  });
+
+  it('rejects a zero or negative target but allows a blank one', () => {
+    expect(validateDraft(draft({ target: 0 })).target).toBeDefined();
+    expect(validateDraft(draft({ target: -10 })).target).toBeDefined();
+    expect(validateDraft(draft({ target: null }))).toEqual({});
+  });
+
+  it('rejects a negative rate but allows a blank or zero rate', () => {
+    expect(validateDraft(draft({ rate: '-1' })).rate).toBeDefined();
+    expect(validateDraft(draft({ rate: 'abc' })).rate).toBeDefined();
+    expect(validateDraft(draft({ rate: '' }))).toEqual({});
+    expect(validateDraft(draft({ rate: '0' }))).toEqual({});
+  });
+});
+
+describe('accountFromDraft', () => {
+  it('trims the name and leaves optional fields out when blank', () => {
+    expect(accountFromDraft(draft({ name: '  Holiday  ' }), 'id1')).toEqual({ id: 'id1', name: 'Holiday', balance: 500 });
+  });
+
+  it('keeps a target and a numeric rate', () => {
+    expect(accountFromDraft(draft({ target: 3000, rate: '2.5' }), 'id1')).toEqual({
+      id: 'id1',
+      name: 'Holiday',
+      balance: 500,
+      target: 3000,
+      interestRate: 2.5,
+    });
+  });
+});
+
+describe('draftFrom', () => {
+  it('round-trips an account through a draft', () => {
+    const a: Account = { id: 'x', name: 'Goal', balance: 900, target: 4000, interestRate: 1.25 };
+    expect(accountFromDraft(draftFrom(a), 'x')).toEqual(a);
+  });
+
+  it('gives a blank draft for an account without optional fields', () => {
+    expect(draftFrom({ id: 'x', name: 'A', balance: 1 })).toEqual({ name: 'A', balance: 1, target: null, rate: '' });
+  });
+
+  it('empty draft is invalid until a name and balance are entered', () => {
+    expect(Object.keys(validateDraft(emptyDraft())).sort()).toEqual(['balance', 'name']);
   });
 });
 

@@ -40,6 +40,54 @@ export function targetProgress(balance: number, target: number | null | undefine
   return Math.min(100, Math.max(0, pct));
 }
 
+/**
+ * Add/Edit form values. Balance and target are numbers (null = blank); the rate stays
+ * text so the input can be typed freely.
+ */
+export interface AccountDraft {
+  name: string;
+  balance: number | null;
+  target: number | null;
+  rate: string;
+}
+
+export type DraftField = 'name' | 'balance' | 'target' | 'rate';
+export type DraftErrors = Partial<Record<DraftField, string>>;
+
+export const emptyDraft = (): AccountDraft => ({ name: '', balance: null, target: null, rate: '' });
+
+export function draftFrom(a: Account): AccountDraft {
+  return {
+    name: a.name,
+    balance: a.balance,
+    target: a.target ?? null,
+    rate: a.interestRate === undefined ? '' : String(a.interestRate),
+  };
+}
+
+/** Field errors for a draft. Empty object = valid. Target and rate are optional when blank. */
+export function validateDraft(d: AccountDraft): DraftErrors {
+  const errors: DraftErrors = {};
+  if (d.name.trim() === '') errors.name = 'Enter a name';
+  if (d.balance === null || !Number.isFinite(d.balance)) errors.balance = 'Enter the balance';
+  if (d.target !== null && !(d.target > 0)) errors.target = 'Target must be more than 0';
+  const rate = d.rate.trim();
+  if (rate !== '') {
+    const r = Number(rate);
+    if (!Number.isFinite(r) || r < 0) errors.rate = 'Enter a rate of 0 or more';
+  }
+  return errors;
+}
+
+/** Account from a draft. Call only after validateDraft returned no errors. */
+export function accountFromDraft(d: AccountDraft, id: string): Account {
+  const account: Account = { id, name: d.name.trim(), balance: d.balance ?? 0 };
+  if (d.target !== null) account.target = d.target;
+  const rate = d.rate.trim();
+  if (rate !== '') account.interestRate = Number(rate);
+  return account;
+}
+
 /** Short unique id for a new account. */
 export function newAccountId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
