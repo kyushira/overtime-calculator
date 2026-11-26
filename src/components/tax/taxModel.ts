@@ -11,6 +11,8 @@ import {
   RELIEF_IDS,
   UI_MAX_CHILDREN,
   computeTax,
+  cpfAgeBand,
+  incomeYearForYa,
   isReliefAvailable,
   reliefCap,
   reliefTiers,
@@ -72,6 +74,16 @@ export interface TaxRow {
   tiers: ReliefTier[];
   /** Id of the tier in force (the selected one, or the default); null without tiers. */
   tierId: string | null;
+  /** cpf only: true when the suggested CPF relief uses the unconfirmed 2024 56–60 employee rate. */
+  cpfEstimate: boolean;
+}
+
+/**
+ * True when the CPF employee rate used for this age and income year is the 2024 56–60 rate (16%),
+ * which is secondary-verified only (see FLAG in src/tax/reliefs.ts).
+ */
+function usesUnconfirmedCpfRate(iy: number, age: number): boolean {
+  return iy === 2024 && cpfAgeBand(age) === 'above55To60';
 }
 
 export interface TaxReminder {
@@ -212,6 +224,8 @@ export function buildTaxView(state: TaxState): TaxView {
       unitsPre2024: id === 'wmcr' ? wmcrPre2024 : 0,
       tiers: [...tierList],
       tierId,
+      cpfEstimate:
+        id === 'cpf' && eligible && available && usesUnconfirmedCpfRate(incomeYearForYa(ya), age),
     });
   }
 

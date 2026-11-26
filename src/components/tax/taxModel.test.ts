@@ -300,3 +300,17 @@ describe('WMCR pre-2024 children in the Tax model', () => {
     expect(big.entries.wmcr?.unitsPre2024).toBe(10);
   });
 });
+
+describe('cpf unconfirmed-rate estimate flag', () => {
+  it('is set for YA2025 at ages 56–60 (2024 16% rate) when the relief is eligible', () => {
+    expect(rowOf(buildTaxView(stateWith({ cpf: {} }, { ya: 2025, age: 58 })), 'cpf').cpfEstimate).toBe(true);
+    expect(rowOf(buildTaxView(stateWith({ cpf: {} }, { ya: 2025, age: 56 })), 'cpf').cpfEstimate).toBe(true);
+  });
+
+  it('is not set outside the 2024 56–60 band, for other YAs, or when ineligible', () => {
+    expect(rowOf(buildTaxView(stateWith({ cpf: {} }, { ya: 2025, age: 55 })), 'cpf').cpfEstimate).toBe(false);
+    expect(rowOf(buildTaxView(stateWith({ cpf: {} }, { ya: 2025, age: 61 })), 'cpf').cpfEstimate).toBe(false);
+    expect(rowOf(buildTaxView(stateWith({ cpf: {} }, { ya: 2026, age: 58 })), 'cpf').cpfEstimate).toBe(false);
+    expect(rowOf(buildTaxView(stateWith({ cpf: { eligible: false } }, { ya: 2025, age: 58 })), 'cpf').cpfEstimate).toBe(false);
+  });
+});

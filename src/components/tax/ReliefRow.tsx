@@ -160,6 +160,11 @@ export function ReliefRow({ row, ya, setEntry }: Props) {
                 </button>
               )}
               {meta.autoSuggest && isSuggested && <span className="block">Automatic suggestion. Type to override.</span>}
+              {row.cpfEstimate && (
+                <span className="block">
+                  Estimated: 16% employee CPF rate for ages 56–60 (2024) not yet confirmed from CPF Board.
+                </span>
+              )}
             </div>
           }
         >
