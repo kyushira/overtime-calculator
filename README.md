@@ -1,6 +1,6 @@
 # Salary & OT Calculator
 
-React + TypeScript + Vite + Tailwind. No backend; settings and inputs persist in localStorage.
+Next.js (App Router) + React + TypeScript + Tailwind. No backend; settings and inputs persist in localStorage.
 
 ```bash
 npm install
