@@ -5,6 +5,8 @@ import {
   UI_MAX_CHILDREN,
   incomeYearForYa,
   reliefCap,
+  reliefTiers,
+  selectedReliefTier,
   suggestCpfRelief,
   suggestEarnedIncomeRelief,
   type ReliefContext,
@@ -25,15 +27,23 @@ function ctx(over: Partial<ReliefContext> = {}): ReliefContext {
 }
 
 describe('reliefCap', () => {
-  it('earnedIncome is the disability-tier upper bound for the age band', () => {
-    expect(reliefCap('earnedIncome', ctx({ age: 30 }))).toBe(4000);
-    expect(reliefCap('earnedIncome', ctx({ age: 55 }))).toBe(10000);
-    expect(reliefCap('earnedIncome', ctx({ age: 60 }))).toBe(12000);
+  it('earnedIncome defaults to the standard tier for the age band', () => {
+    expect(reliefCap('earnedIncome', ctx({ age: 30 }))).toBe(1000);
+    expect(reliefCap('earnedIncome', ctx({ age: 55 }))).toBe(6000);
+    expect(reliefCap('earnedIncome', ctx({ age: 60 }))).toBe(8000);
+  });
+
+  it('earnedIncome uses the disability tier when selected', () => {
+    const tiers = { earnedIncome: 'disability' };
+    expect(reliefCap('earnedIncome', ctx({ age: 30, tiers }))).toBe(4000);
+    expect(reliefCap('earnedIncome', ctx({ age: 55, tiers }))).toBe(10000);
+    expect(reliefCap('earnedIncome', ctx({ age: 60, tiers }))).toBe(12000);
   });
 
   it('earnedIncome cannot exceed the taxable earned income', () => {
+    expect(reliefCap('earnedIncome', ctx({ employmentIncome: 500, bonus: 0 }))).toBe(500);
     expect(
-      reliefCap('earnedIncome', ctx({ employmentIncome: 2000, bonus: 0 })),
+      reliefCap('earnedIncome', ctx({ employmentIncome: 2000, bonus: 0, tiers: { earnedIncome: 'disability' } })),
     ).toBe(2000);
   });
 
@@ -57,8 +67,10 @@ describe('reliefCap', () => {
     expect(reliefCap('lifeInsurance', ctx({ claimed: { cpf: 6000 } }))).toBe(0);
   });
 
-  it('nsman self cap is the key-appointment activity amount', () => {
-    expect(reliefCap('nsmanSelf', ctx())).toBe(5000);
+  it('nsman self defaults to the general, performed-activity amount', () => {
+    expect(reliefCap('nsmanSelf', ctx())).toBe(3000);
+    expect(reliefCap('nsmanSelf', ctx({ tiers: { nsmanSelf: 'keyAppointment-activity' } }))).toBe(5000);
+    expect(reliefCap('nsmanSelf', ctx({ tiers: { nsmanSelf: 'general-noActivity' } }))).toBe(1500);
   });
 
   it('nsman wife cap is $750', () => {
@@ -73,15 +85,32 @@ describe('reliefCap', () => {
     expect(NSMAN_PARENT_MAX_PARENTS).toBe(2);
   });
 
-  it('spouse cap is the disability amount (upper bound)', () => {
-    expect(reliefCap('spouse', ctx())).toBe(5500);
+  it('spouse defaults to the standard amount and uses the disabled tier when selected', () => {
+    expect(reliefCap('spouse', ctx())).toBe(2000);
+    expect(reliefCap('spouse', ctx({ tiers: { spouse: 'disability' } }))).toBe(5500);
   });
 
-  it('parent clamps units to 0..2 and uses the stays-with-disability upper bound', () => {
+  it('parent defaults to stays-with, clamps units to 0..2 and multiplies by the tier', () => {
     expect(reliefCap('parent', ctx({ units: { parent: 0 } }))).toBe(0);
-    expect(reliefCap('parent', ctx({ units: { parent: 1 } }))).toBe(14000);
-    expect(reliefCap('parent', ctx({ units: { parent: 2 } }))).toBe(28000);
-    expect(reliefCap('parent', ctx({ units: { parent: 9 } }))).toBe(28000);
+    expect(reliefCap('parent', ctx({ units: { parent: 1 } }))).toBe(9000);
+    expect(reliefCap('parent', ctx({ units: { parent: 2 } }))).toBe(18000);
+    expect(reliefCap('parent', ctx({ units: { parent: 9 } }))).toBe(18000);
+  });
+
+  it('parent uses the selected tier per dependant', () => {
+    expect(reliefCap('parent', ctx({ units: { parent: 1 }, tiers: { parent: 'notStaysWith' } }))).toBe(5500);
+    expect(
+      reliefCap('parent', ctx({ units: { parent: 2 }, tiers: { parent: 'staysWithDisability' } })),
+    ).toBe(28000);
+    expect(
+      reliefCap('parent', ctx({ units: { parent: 1 }, tiers: { parent: 'notStaysWithDisability' } })),
+    ).toBe(10000);
+  });
+
+  it('falls back to the default tier for an unknown tier id', () => {
+    expect(reliefCap('spouse', ctx({ tiers: { spouse: 'martian' } }))).toBe(2000);
+    expect(reliefCap('parent', ctx({ units: { parent: 1 }, tiers: { parent: 'nope' } }))).toBe(9000);
+    expect(reliefCap('earnedIncome', ctx({ tiers: { earnedIncome: 'nope' } }))).toBe(1000);
   });
 
   it('qcr is $4,000 per child, clamped to UI_MAX_CHILDREN', () => {
@@ -126,6 +155,61 @@ describe('suggestEarnedIncomeRelief', () => {
   it('uses the normal (non-disabled) tier on employment plus bonus', () => {
     expect(suggestEarnedIncomeRelief(ctx({ age: 30 }))).toBe(1000);
     expect(suggestEarnedIncomeRelief(ctx({ age: 60, employmentIncome: 500, bonus: 0 }))).toBe(500);
+  });
+
+  it('follows the disability tier when selected', () => {
+    expect(suggestEarnedIncomeRelief(ctx({ age: 30, tiers: { earnedIncome: 'disability' } }))).toBe(4000);
+  });
+});
+
+describe('reliefTiers', () => {
+  it('lists the earned income tiers for the age band, standard first', () => {
+    expect(reliefTiers('earnedIncome', { age: 30 })?.map((t) => [t.id, t.amount])).toEqual([
+      ['normal', 1000],
+      ['disability', 4000],
+    ]);
+    expect(reliefTiers('earnedIncome', { age: 57 })?.map((t) => t.amount)).toEqual([6000, 10000]);
+    expect(reliefTiers('earnedIncome', { age: 60 })?.map((t) => t.amount)).toEqual([8000, 12000]);
+  });
+
+  it('lists the spouse, parent and NSman self tiers with the default first', () => {
+    expect(reliefTiers('spouse', { age: 30 })?.map((t) => [t.id, t.amount])).toEqual([
+      ['normal', 2000],
+      ['disability', 5500],
+    ]);
+    expect(reliefTiers('parent', { age: 30 })?.map((t) => [t.id, t.amount])).toEqual([
+      ['staysWith', 9000],
+      ['notStaysWith', 5500],
+      ['staysWithDisability', 14000],
+      ['notStaysWithDisability', 10000],
+    ]);
+    expect(reliefTiers('nsmanSelf', { age: 30 })?.map((t) => [t.id, t.amount])).toEqual([
+      ['general-activity', 3000],
+      ['general-noActivity', 1500],
+      ['keyAppointment-activity', 5000],
+      ['keyAppointment-noActivity', 3500],
+    ]);
+  });
+
+  it('is undefined for reliefs without tiers', () => {
+    expect(reliefTiers('cpf', { age: 30 })).toBeUndefined();
+    expect(reliefTiers('qcr', { age: 30 })).toBeUndefined();
+    expect(reliefTiers('srs', { age: 30 })).toBeUndefined();
+  });
+
+  it('every tier id is unique within its relief', () => {
+    for (const id of RELIEF_IDS) {
+      const ids = (reliefTiers(id, { age: 30 }) ?? []).map((t) => t.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+});
+
+describe('selectedReliefTier', () => {
+  it('returns the selected tier, else the default', () => {
+    expect(selectedReliefTier('spouse', ctx())?.id).toBe('normal');
+    expect(selectedReliefTier('spouse', ctx({ tiers: { spouse: 'disability' } }))?.id).toBe('disability');
+    expect(selectedReliefTier('cpf', ctx())).toBeUndefined();
   });
 });
 

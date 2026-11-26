@@ -76,16 +76,16 @@ describe('buildTaxView totals and cap', () => {
   });
 
   it('reports the cap reached when claimed rows sum past $80,000', () => {
-    // parent 2×14000 + qcr 10×4000 + hcr 1×7500 + spouse 5500 = 81000
+    // parent 2×14000 (disabled tier) + qcr 10×4000 + hcr 1×7500 + spouse 5500 (disabled tier) = 81000
     const view = buildTaxView(
       stateWith(
         {
           earnedIncome: { eligible: false },
           cpf: { eligible: false },
-          parent: { units: 2, amount: 28000 },
+          parent: { units: 2, amount: 28000, tier: 'staysWithDisability' },
           qcr: { units: 10, amount: 40000 },
           hcr: { units: 1, amount: 7500 },
-          spouse: { amount: 5500 },
+          spouse: { amount: 5500, tier: 'disability' },
         },
         { bonus: 300000 },
       ),
@@ -117,7 +117,9 @@ describe('buildTaxView reminders', () => {
   it('lists eligible, available reliefs with room, sorted by extraSaving descending', () => {
     const view = buildTaxView(stateWith({}, { employmentIncome: 150000 }));
     const ids = view.reminders.map((r) => r.id);
-    expect(ids).toEqual(expect.arrayContaining(['earnedIncome', 'cpf', 'srs', 'cpfCashTopUp']));
+    expect(ids).toEqual(expect.arrayContaining(['cpf', 'srs', 'cpfCashTopUp']));
+    // The standard Earned Income tier is fully claimed by the automatic suggestion.
+    expect(ids).not.toContain('earnedIncome');
     expect(ids).not.toContain('courseFees');
     // claimed CPF (17760) ≥ $5,000, so the life-insurance cap is 0 and there is no room to remind about.
     expect(ids).not.toContain('lifeInsurance');
@@ -144,6 +146,54 @@ describe('buildTaxView reminders', () => {
       reliefs: toReliefLines({ earnedIncome: 1000, cpf: 17760 }, 2026),
     });
     expect(srs?.extraSaving).toBeCloseTo(base.netTaxPayable - withSrsAtCap.netTaxPayable, 2);
+  });
+});
+
+describe('buildTaxView relief tiers', () => {
+  it('caps tiered reliefs at the default tier when none is selected', () => {
+    const view = buildTaxView(
+      stateWith({ spouse: {}, parent: { units: 1 }, nsmanSelf: {}, earnedIncome: {} }, { employmentIncome: 90000 }),
+    );
+    expect(rowOf(view, 'spouse')).toMatchObject({ cap: 2000, tierId: 'normal' });
+    expect(rowOf(view, 'parent')).toMatchObject({ cap: 9000, tierId: 'staysWith' });
+    expect(rowOf(view, 'nsmanSelf')).toMatchObject({ cap: 3000, tierId: 'general-activity' });
+    expect(rowOf(view, 'earnedIncome')).toMatchObject({ cap: 1000, tierId: 'normal' });
+  });
+
+  it('exposes the tier list on tiered rows only', () => {
+    const view = buildTaxView(defaultTaxState());
+    expect(rowOf(view, 'parent').tiers.map((t) => t.amount)).toEqual([9000, 5500, 14000, 10000]);
+    expect(rowOf(view, 'srs')).toMatchObject({ tiers: [], tierId: null });
+  });
+
+  it('uses the selected tier for cap, claimed and totals', () => {
+    const view = buildTaxView(stateWith({ spouse: { tier: 'disability', amount: 5500 } }));
+    expect(rowOf(view, 'spouse')).toMatchObject({ cap: 5500, claimed: 5500, tierId: 'disability' });
+    expect(view.totalClaimed).toBe(5500);
+  });
+
+  it('reminder room follows the selected parent tier', () => {
+    const standard = buildTaxView(stateWith({ parent: { units: 1 } }, { employmentIncome: 150000 }));
+    const disabled = buildTaxView(
+      stateWith({ parent: { units: 1, tier: 'staysWithDisability' } }, { employmentIncome: 150000 }),
+    );
+    expect(standard.reminders.find((r) => r.id === 'parent')?.room).toBe(9000);
+    expect(disabled.reminders.find((r) => r.id === 'parent')?.room).toBe(14000);
+  });
+
+  it('earned income reminder room uses the selected tier', () => {
+    // Standard tier, automatic suggestion: fully claimed, so no reminder.
+    const standard = buildTaxView(stateWith({}, { employmentIncome: 150000 }));
+    expect(standard.reminders.map((r) => r.id)).not.toContain('earnedIncome');
+    // Disability tier: the suggestion follows the tier, so it is claimed in full.
+    const suggested = buildTaxView(stateWith({ earnedIncome: { tier: 'disability' } }, { employmentIncome: 150000 }));
+    expect(rowOf(suggested, 'earnedIncome')).toMatchObject({ claimed: 4000, suggested: 4000 });
+    expect(suggested.reminders.map((r) => r.id)).not.toContain('earnedIncome');
+    // Typed amount of 1000 under the disability tier leaves 3000 of room.
+    const typed = buildTaxView(
+      stateWith({ earnedIncome: { tier: 'disability', amount: 1000 } }, { employmentIncome: 150000 }),
+    );
+    expect(typed.reminders.find((r) => r.id === 'earnedIncome')?.room).toBe(3000);
   });
 });
 
@@ -174,6 +224,24 @@ describe('migrateTaxState', () => {
       { ya: 2025, age: 58, residency: 'foreigner', employmentIncome: 70000 },
     );
     expect(migrateTaxState(JSON.parse(JSON.stringify(state)))).toEqual(state);
+  });
+
+  it('keeps known tier ids and drops unknown ones', () => {
+    const migrated = migrateTaxState({
+      v: 1,
+      entries: {
+        spouse: { eligible: true, amount: null, units: 0, tier: 'disability' },
+        parent: { eligible: true, amount: null, units: 1, tier: 'martian' },
+        cpf: { eligible: true, amount: null, units: 0, tier: 42 },
+      },
+    });
+    expect(migrated.entries.spouse?.tier).toBe('disability');
+    expect(migrated.entries.parent?.tier).toBeUndefined();
+    expect(migrated.entries.cpf?.tier).toBeUndefined();
+    // A tier id from another relief is not valid here either.
+    const cross = migrateTaxState({ v: 1, entries: { spouse: { tier: 'staysWith' } } });
+    expect(cross.entries.spouse?.tier).toBeUndefined();
+    expect(buildTaxView(migrated).rows.find((r) => r.id === 'parent')?.tierId).toBe('staysWith');
   });
 
   it('clamps unit counts to UI_MAX_CHILDREN', () => {

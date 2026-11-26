@@ -13,12 +13,15 @@ import {
   computeTax,
   isReliefAvailable,
   reliefCap,
+  reliefTiers,
+  selectedReliefTier,
   suggestCpfRelief,
   suggestEarnedIncomeRelief,
   toReliefLines,
   type ReliefContext,
   type ReliefId,
   type ReliefMeta,
+  type ReliefTier,
   type Residency,
   type TaxResult,
   type YA,
@@ -33,6 +36,8 @@ export interface EntryState {
   amount: number | null;
   /** Parents / children count for unit-based reliefs. */
   units: number;
+  /** Selected tier id for a tiered relief. Absent = default tier. */
+  tier?: string;
 }
 
 export interface TaxState {
@@ -57,6 +62,10 @@ export interface TaxRow {
   /** true when `claimed` came from the suggestion rather than a typed amount. */
   isSuggested: boolean;
   units: number;
+  /** Selectable tiers (empty when the relief has none). Default tier first. */
+  tiers: ReliefTier[];
+  /** Id of the tier in force (the selected one, or the default); null without tiers. */
+  tierId: string | null;
 }
 
 export interface TaxReminder {
@@ -145,6 +154,12 @@ export function buildTaxView(state: TaxState): TaxView {
     units[id] = clampUnits(state.entries[id]?.units ?? 0, RELIEF_CATALOGUE[id].maxUnits ?? 0);
   }
 
+  const tiers: Partial<Record<ReliefId, string>> = {};
+  for (const id of RELIEF_IDS) {
+    const tier = state.entries[id]?.tier;
+    if (tier !== undefined) tiers[id] = tier;
+  }
+
   const claimed: Partial<Record<ReliefId, number>> = {};
   const rows: TaxRow[] = [];
   // RELIEF_IDS order matters: cpf is claimed before lifeInsurance, whose cap reads claimed.cpf.
@@ -161,8 +176,11 @@ export function buildTaxView(state: TaxState): TaxView {
       residency,
       claimed,
       units,
+      tiers,
     };
     const cap = reliefCap(id, ctx);
+    const tierList = reliefTiers(id, ctx) ?? [];
+    const tierId = selectedReliefTier(id, ctx)?.id ?? null;
     const suggested = suggestionFor(id, ctx);
     const amount = entry?.amount ?? null;
     const value =
@@ -178,6 +196,8 @@ export function buildTaxView(state: TaxState): TaxView {
       claimed: value,
       isSuggested: eligible && available && meta.autoSuggest && amount === null,
       units: units[id] ?? 0,
+      tiers: [...tierList],
+      tierId,
     });
   }
 
@@ -215,13 +235,21 @@ function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null && !Array.isArray(x);
 }
 
+/** Tier ids do not depend on age, so any age reads the same list. */
+function isKnownTier(id: ReliefId, tier: string): boolean {
+  return (reliefTiers(id, { age: 0 }) ?? []).some((t) => t.id === tier);
+}
+
 function parseEntry(raw: unknown, id: ReliefId): EntryState {
   if (!isRecord(raw)) return defaultEntry(id);
   const eligible = typeof raw.eligible === 'boolean' ? raw.eligible : defaultEntry(id).eligible;
   const amount =
     typeof raw.amount === 'number' && Number.isFinite(raw.amount) ? Math.max(0, raw.amount) : null;
   const units = typeof raw.units === 'number' ? clampUnits(raw.units, UI_MAX_CHILDREN) : 0;
-  return { eligible, amount, units };
+  const entry: EntryState = { eligible, amount, units };
+  // Unknown tier ids are dropped, so the relief falls back to its default tier.
+  if (typeof raw.tier === 'string' && isKnownTier(id, raw.tier)) entry.tier = raw.tier;
+  return entry;
 }
 
 /**
