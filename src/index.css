@@ -42,6 +42,16 @@
   /* Card / panel border. */
   --color-card-border: #ececee;
 
+  /* Home (module picker). */
+  --color-home-page: #f7f8fa;
+  --color-home-tile: #f3f4f6;
+  --color-home-icon: #374151;
+  --color-home-title: #111827;
+  --color-home-sub: #6b7280;
+  --color-home-chevron: #9ca3af;
+  --color-home-divider: #eeeeee;
+  --shadow-home-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 20px rgba(16, 24, 40, 0.06);
+
   /* Chart / category colours (bars, dots, donut segments). */
   --color-chart-basic: #4b5563;
   --color-chart-allowance: #22a861;
@@ -124,6 +134,15 @@
   --color-ph-solid: #2563eb;
   --color-focus-ring: #aaa3ff;
   --color-card-border: rgba(170, 163, 255, 0.1);
+
+  --color-home-page: #0b0d14;
+  --color-home-tile: #1b1f2e;
+  --color-home-icon: #d6dae5;
+  --color-home-title: #f3f5f9;
+  --color-home-sub: #a3aabd;
+  --color-home-chevron: #5b6378;
+  --color-home-divider: #272c3d;
+  --shadow-home-card: none;
 
   --color-chart-basic: #b4bccb;
   --color-chart-allowance: #3ddc84;
